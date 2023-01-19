@@ -27,11 +27,11 @@ actividade:
 	muito ativo: exercicio muito intesso diário, ou te um trabalho muito fisico 
 
 'absolutamente nenhum': ['Taxa metabólica basal',1],
-      'sedentario': [ 'Pouco ou nenhum exercicio',1.2],
-	'leve': ['Exercicio de 1 a 3 vezes',1.375],
-	'moderado': ['execicio 4-5 vezes/semana',1.465],
-	'ativo': ['execicio diario ou exercicios intensos 3-4 vezes/semana',1.55],
-	'muito ativo': ['exercissio intesso diário, ou te um trabalho muito fisico',]
+'sedentario': [ 'Pouco ou nenhum exercicio',1.2],
+'leve': ['Exercicio de 1 a 3 vezes',1.375],
+'moderado': ['execicio 4-5 vezes/semana',1.465],
+'ativo': ['execicio diario ou exercicios intensos 3-4 vezes/semana',1.55],
+'muito ativo': ['exercissio intesso diário, ou te um trabalho muito fisico',]
 
 exercicio: 15-30 minutes of elevated heart rate activity.
 exercicio intenso: 45-120 minutes of elevated heart rate activity.
