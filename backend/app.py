@@ -7,7 +7,7 @@ from requests import request
 app = Flask(__name__)
 api = Api(app)
 
-LOCAL_HOST = "http://127.0.0.1:5000"
+LOCAL_HOST = "http://localhost:8000"
 
 ACTIVIDADE = {
             'absolutamente_nenhum': ['Taxa metabólica basal', 1],

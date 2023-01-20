@@ -1,49 +1,86 @@
-# PFM_Flask_API
+## Compose sample application
 
+### Use with Docker Development Environments
 
-# Comandos 
+You can open this sample in the Dev Environments feature of Docker Desktop version 4.12 or later.
 
-C:\Users\rafae\Desktop\Projetos\MyProjects\PFM_flask_api\venv\Scripts\activate
+[Open in Docker Dev Environments <img src="../open_in_new.svg" alt="Open in Docker Dev Environments" align="top"/>](https://open.docker.com/dashboard/dev-envs?url=https://github.com/docker/awesome-compose/tree/master/nginx-flask-mysql)
 
-python -m virtualenv venv
+### Python/Flask with Nginx proxy and MySQL database
 
-python -m eb
+Project structure:
+```
+.
+├── compose.yaml
+├── flask
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── server.py
+└── nginx
+    └── nginx.conf
 
-eb open
+```
 
-eb terminate flask-env
+[_compose.yaml_](compose.yaml)
+```
+services:
+  backend:
+    build:
+      context: backend
+      target: builder
+    ...
+  db:
+    # We use a mariadb image which supports both amd64 & arm64 architecture
+    image: mariadb:10-focal
+    # If you really want to use MySQL, uncomment the following line
+    #image: mysql:8
+    ...
+  proxy:
+    build: proxy
+    ...
+```
+The compose file defines an application with three services `proxy`, `backend` and `db`.
+When deploying the application, docker compose maps port 80 of the proxy service container to port 80 of the host as specified in the file.
+Make sure port 80 on the host is not already being in use.
 
-# BrainStorm
+> ℹ️ **_INFO_**  
+> For compatibility purpose between `AMD64` and `ARM64` architecture, we use a MariaDB as database instead of MySQL.  
+> You still can use the MySQL image by uncommenting the following line in the Compose file   
+> `#image: mysql:8`
 
-altura
-peso
-idade
-genero
-actividade:
-	sedentario: little or no exercice
-	leve: exercicio de 1 a 3 vezes
-	moderado: execicio 4-5 vezes/semana
-	ativo: execicio diario ou exercicios intensos 3-4 vezes/semana
-	muito ativo: exercicio muito intesso diário, ou te um trabalho muito fisico 
+## Deploy with docker compose
 
-'absolutamente nenhum': ['Taxa metabólica basal',1],
-'sedentario': [ 'Pouco ou nenhum exercicio',1.2],
-'leve': ['Exercicio de 1 a 3 vezes',1.375],
-'moderado': ['execicio 4-5 vezes/semana',1.465],
-'ativo': ['execicio diario ou exercicios intensos 3-4 vezes/semana',1.55],
-'muito ativo': ['exercissio intesso diário, ou te um trabalho muito fisico',]
+```
+$ docker compose up -d
+Creating network "nginx-flask-mysql_default" with the default driver
+Pulling db (mysql:8.0.19)...
+5.7: Pulling from library/mysql
+...
+...
+WARNING: Image for service proxy was built because it did not already exist. To rebuild this image you must use `docker-compose build` or `docker-compose up --build`.
+Creating nginx-flask-mysql_db_1 ... done
+Creating nginx-flask-mysql_backend_1 ... done
+Creating nginx-flask-mysql_proxy_1   ... done
+```
 
-exercicio: 15-30 minutes of elevated heart rate activity.
-exercicio intenso: 45-120 minutes of elevated heart rate activity.
-exercicio muito intesso: 2+ hours of elevated heart rate activity.
+## Expected result
 
-/full_model?altura=180&idade=20&genero=m&peso=60&atividade=leve&goal=0
+Listing containers should show three containers running and the port mapping as below:
+```
+$ docker compose ps
+NAME                          COMMAND                  SERVICE             STATUS              PORTS
+nginx-flask-mysql-backend-1   "flask run"              backend             running             0.0.0.0:8000->8000/tcp
+nginx-flask-mysql-db-1        "docker-entrypoint.s…"   db                  running (healthy)   3306/tcp, 33060/tcp
+nginx-flask-mysql-proxy-1     "nginx -g 'daemon of…"   proxy               running             0.0.0.0:80->80/tcp
+```
 
-two types of goals:
-	inseridos pelo proprio
-	sugeridos pela app:
-		perder 1
-		perder 0.5
-		perder 0
-		ganhar 0.5
-		ganhar 1
+After the application starts, navigate to `http://localhost:80` in your web browser or run:
+```
+$ curl localhost:80
+<div>Blog post #1</div><div>Blog post #2</div><div>Blog post #3</div><div>Blog post #4</div>
+```
+
+Stop and remove the containers
+```
+$ docker compose down
+```
