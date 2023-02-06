@@ -1,8 +1,15 @@
+import math
+
 import requests
 from flask import Flask
 from flask_restful import reqparse, abort, Api, Resource
 from bs4 import *
 from requests import request
+
+from backend.dbManager import DBManager
+from backend.endpoints.recipes import Recipe
+from backend.endpoints.user import User
+from backend.teste import main
 
 app = Flask(__name__)
 api = Api(app)
@@ -18,20 +25,6 @@ ACTIVIDADE = {
             'muito_ativo': ['Exercícios intensos 6-7 vezes/semana', 1.725],
             'extra_ativo': ['Execício intesso diário, ou te um trabalho muito fisico', 1.9]
         }
-
-# TRASH
-
-TODOS = {
-    'todo1': {'task': 'build an API'},
-    'todo2': {'task': '?????'},
-    'todo3': {'task': 'profit!'},
-}
-
-
-def abort_if_todo_doesnt_exist(todo_id):
-    if todo_id not in TODOS:
-        abort(404, message="Todo {} doesn't exist".format(todo_id))
-
 
 parser = reqparse.RequestParser()
 parser.add_argument('altura')
@@ -311,37 +304,7 @@ class Full_Model(Resource):
         return -1
 
 
-
-class Todo(Resource):
-    def get(self, todo_id):
-        abort_if_todo_doesnt_exist(todo_id)
-        return TODOS[todo_id]
-
-    def delete(self, todo_id):
-        abort_if_todo_doesnt_exist(todo_id)
-        del TODOS[todo_id]
-        return '', 204
-
-    def put(self, todo_id):
-        args = parser.parse_args()
-        task = {'task': args['task']}
-        TODOS[todo_id] = task
-        return task, 201
-
-
-# TodoList
-# shows a list of all todos, and lets you POST to add new tasks
-class TodoList(Resource):
-    def get(self):
-        return TODOS
-
-    def post(self):
-        args = parser.parse_args()
-        todo_id = int(max(TODOS.keys()).lstrip('todo')) + 1
-        todo_id = 'todo%i' % todo_id
-        TODOS[todo_id] = {'task': args['task']}
-        return TODOS[todo_id], 201
-
+# /recipe
 
 ##
 ## Actually setup the Api resource routing here
@@ -354,6 +317,13 @@ api.add_resource(Gordura, '/gordura')
 api.add_resource(Proteina, '/proteina')
 api.add_resource(Hidratos_De_Carbono, '/hidratos_de_carbono')
 api.add_resource(Full_Model, '/full_model')
+api.add_resource(Recipe, '/recipe')
+api.add_resource(User, '/user')
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    #Database
+    conn = DBManager()
+    conn.populate_db()
+    #main()
+    app.run(debug=True,host="0.0.0.0")
