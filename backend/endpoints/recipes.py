@@ -13,7 +13,7 @@ parser.add_argument('page')
 parser.add_argument('page_size')
 parser.add_argument('id')
 
-
+RECIPE_ENDPOINT = "recipe"
 class Recipe(Resource):
     response_placeholder = {
         "_metadata":
@@ -23,11 +23,11 @@ class Recipe(Resource):
                 "per_page": 20,
                 "total_count": 521,
                 "Links": [
-                    {"self": "/products?page=5&per_page=20"},
-                    {"first": "/products?page=0&per_page=20"},
-                    {"previous": "/products?page=4&per_page=20"},
-                    {"next": "/products?page=6&per_page=20"},
-                    {"last": "/products?page=26&per_page=20"},
+                    {"self": f"/{RECIPE_ENDPOINT}?page=5&per_page=20"},
+                    {"first": f"/{RECIPE_ENDPOINT}?page=0&per_page=20"},
+                    {"previous": f"/{RECIPE_ENDPOINT}?page=4&per_page=20"},
+                    {"next": f"/{RECIPE_ENDPOINT}?page=6&per_page=20"},
+                    {"last": f"/{RECIPE_ENDPOINT}?page=26&per_page=20"},
                 ]
             },
         "results": []
@@ -54,15 +54,15 @@ class Recipe(Resource):
 
         if page < total_pages:
             next_link = page + 1
-            response_holder['_metadata']['Links'].append({"next": f"/products?page={next_link}&page_size={page_size}"},
+            response_holder['_metadata']['Links'].append({"next": f"/{RECIPE_ENDPOINT}?page={next_link}&page_size={page_size}"},
                                                          )
         if page > total_pages:
             previous_link = page - 1
             response_holder['_metadata']['Links'].append(
-                {"previous": f"/products?page={previous_link}&page_size={page_size}"})
+                {"previous": f"/{RECIPE_ENDPOINT}?page={previous_link}&page_size={page_size}"})
 
-        response_holder['_metadata']['Links'].append({"first": f"/products?page=1&page_size={page_size}"})
-        response_holder['_metadata']['Links'].append({"last": f"/products?page={total_pages}&page_size={page_size}"})
+        response_holder['_metadata']['Links'].append({"first": f"/{RECIPE_ENDPOINT}?page=1&page_size={page_size}"})
+        response_holder['_metadata']['Links'].append({"last": f"/{RECIPE_ENDPOINT}?page={total_pages}&page_size={page_size}"})
 
         response_holder['_metadata']['page'] = page
         response_holder['_metadata']['per_page'] = page_size

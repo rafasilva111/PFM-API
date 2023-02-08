@@ -101,3 +101,6 @@ class UserDTO():
     altura = None
     sexo = None
     peso = None
+
+    
+

@@ -12,10 +12,12 @@ parser = reqparse.RequestParser()
 parser.add_argument('page')
 parser.add_argument('page_size')
 parser.add_argument('id')
-parser.add_argument('uuid')
+parser.add_argument('userUUID')
 
 PROFILE_TYPE = {"NORMAL", "VIP", "ADMIN"}
 SEXES = {"F", "M"}
+
+USER_ENDPOINT = "user"
 
 
 class User(Resource):
@@ -27,11 +29,11 @@ class User(Resource):
                 "per_page": 20,
                 "total_count": 521,
                 "Links": [
-                    {"self": "/products?page=5&per_page=20"},
-                    {"first": "/products?page=0&per_page=20"},
-                    {"previous": "/products?page=4&per_page=20"},
-                    {"next": "/products?page=6&per_page=20"},
-                    {"last": "/products?page=26&per_page=20"},
+                    {"self": f"/{USER_ENDPOINT}?page=5&per_page=20"},
+                    {"first": f"/{USER_ENDPOINT}?page=0&per_page=20"},
+                    {"previous": f"/{USER_ENDPOINT}?page=4&per_page=20"},
+                    {"next": f"/{USER_ENDPOINT}?page=6&per_page=20"},
+                    {"last": f"/{USER_ENDPOINT}?page=26&per_page=20"},
                 ]
             },
         "results": []
@@ -40,9 +42,9 @@ class User(Resource):
     # /recipe
     def get(self):
         args = parser.parse_args()
-        #single record
-        if args['uuid']:
-            user_record =UserDB.get(uuid=args['uuid'])
+        # single record
+        if args['userUUID']:
+            user_record = UserDB.get(uuid=args['userUUID'])
             userResponse = model_to_dict(user_record)
 
             userResponse['created_date'] = userResponse['created_date'].strftime("%d/%m/%Y, %H:%M:%S")
@@ -50,14 +52,12 @@ class User(Resource):
             userResponse['birth_date'] = userResponse['birth_date'].strftime("%d/%m/%Y")
 
             return Response(status=200, response=json.dumps(userResponse), mimetype="application/json")
-        #all records
+        # all records
         else:
             args = parser.parse_args()
-            page = args['page'] if args['page'] else 1
+            page = args['page'] if args['page'] else 0
             page_size = int(args['page_size']) if args['page_size'] else 20
 
-            if page <= 0:
-                return Response(status=400, response="page cant be negative")
             if page_size not in [5, 10, 20, 40]:
                 return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
@@ -65,40 +65,44 @@ class User(Resource):
 
             # metadata
 
-            total_recipes = int(RecipeDB.select().count())
+            total_recipes = int(UserDB.select().count())
             total_pages = math.ceil(total_recipes / page_size)
             response_holder['_metadata']['Links'] = []
 
             if page < total_pages:
                 next_link = page + 1
-                response_holder['_metadata']['Links'].append({"next": f"/products?page={next_link}&page_size={page_size}"},
-                                                             )
+                response_holder['_metadata']['Links'].append(
+                    {"next": f"/{USER_ENDPOINT}?page={next_link}&page_size={page_size}"},
+                    )
             if page > total_pages:
                 previous_link = page - 1
                 response_holder['_metadata']['Links'].append(
-                    {"previous": f"/products?page={previous_link}&page_size={page_size}"})
+                    {"previous": f"/{USER_ENDPOINT}?page={previous_link}&page_size={page_size}"})
 
-            response_holder['_metadata']['Links'].append({"first": f"/products?page=1&page_size={page_size}"})
-            response_holder['_metadata']['Links'].append({"last": f"/products?page={total_pages}&page_size={page_size}"})
+            response_holder['_metadata']['Links'].append({"first": f"/{USER_ENDPOINT}?page=1&page_size={page_size}"})
+            response_holder['_metadata']['Links'].append(
+                {"last": f"/{USER_ENDPOINT}?page={total_pages}&page_size={page_size}"})
 
             response_holder['_metadata']['page'] = page
             response_holder['_metadata']['per_page'] = page_size
             response_holder['_metadata']['page_count'] = total_pages
             response_holder['_metadata']['total_count'] = total_recipes
 
-            recipes = []
-            for item in RecipeDB.select().paginate(page, page_size):
-                recipes.append(RecipeDTO(id=item.id, title=item.title, description=item.description,
+            user = []
+            for item in UserDB.select().paginate(page, page_size):
+                user.append(User(id=item.id, title=item.title, description=item.description,
                                          created_date=item.created_date.strftime("%d/%m/%Y, %H:%M:%S"),
                                          updated_date=item.updated_date.strftime("%d/%m/%Y, %H:%M:%S"),
                                          img_source=item.img_source,
-                                         difficulty=item.difficulty, portion=item.portion, time=item.time, likes=item.likes,
+                                         difficulty=item.difficulty, portion=item.portion, time=item.time,
+                                         likes=item.likes,
                                          source_rating=item.source_rating,
                                          views=item.views, tags=item.tags, ingredients=item.ingredients,
-                                         preparations=item.preparations, nutrition_informations=item.nutrition_informations
+                                         preparations=item.preparations,
+                                         nutrition_informations=item.nutrition_informations
                                          ).__dict__)
 
-            response_holder["results"] = recipes
+            response_holder["results"] = user
 
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
@@ -217,8 +221,8 @@ class User(Resource):
         userDB.uuid = uuid
         userDB.first_name = first_name
         userDB.last_name = last_name
-        userDB.birth_date = datetime.datetime.strptime(birth_date,"%d/%m/%Y")
-        userDB.age = int(datetime.datetime.now().year)-int(userDB.birth_date.year)
+        userDB.birth_date = datetime.datetime.strptime(birth_date, "%d/%m/%Y")
+        userDB.age = int(datetime.datetime.now().year) - int(userDB.birth_date.year)
         userDB.email = email
         userDB.profile_type = profile_type if profile_type is not None else userDB.profile_type
         userDB.verified = verified

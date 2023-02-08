@@ -7,4 +7,7 @@
     <orderEntry type="jdk" jdkName="Python 3.9 (PFM_Flask_API)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
+  <component name="PackageRequirementsSettings">
+    <option name="requirementsPath" value="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\backend\requirements.txt" />
+  </component>
 </module>

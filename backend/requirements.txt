@@ -19,3 +19,4 @@ six==1.16.0
 soupsieve==2.3.2.post1
 urllib3==1.26.13
 Werkzeug==2.0.2
+peewee~=3.15.4

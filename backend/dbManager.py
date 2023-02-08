@@ -25,9 +25,6 @@ class DBManager:
         self.populate_db()
 
     def populate_db(self):
-
-
-
         db.create_tables(
             [User, Recipe, RecipesBackground, Comments, Goals, GoalTypeAll, GoalTypeDefault, GoalsTypeMapper, Scheduale,
              Followers, Tags, Preparation, Nutrition_Information, Ingredients
@@ -36,7 +33,7 @@ class DBManager:
         RecipeTags = Recipe.tags.get_through_model()
         RecipeIngridients = Recipe.ingredients.get_through_model()
 
-        db.create_tables([RecipeTags,RecipeIngridients])
+        db.create_tables([RecipeTags, RecipeIngridients])
         return
 
     def query_titles(self):
@@ -65,7 +62,7 @@ class BaseModel(Model):
 
 
 class User(BaseModel):
-    uuid = TextField(null=False,unique=True)
+    uuid = TextField(null=False, unique=True)
     first_name = TextField(null=False)
     last_name = TextField(null=False)
     birth_date = DateTimeField(null=False)
@@ -85,8 +82,11 @@ class User(BaseModel):
     weight = FloatField(null=True)
     age = CharField(null=False)
 
+
 class Tags(Model):
-    title = CharField()
+    title = CharField(null=False)
+    verified = BooleanField(null=False, default=0)
+    cor = CharField(null=True)
 
     class Meta:
         database = db
@@ -117,18 +117,18 @@ class GoalTypeDefault(BaseModel):
 
 class GoalsTypeMapper(BaseModel):
     type = CharField()
-    id_type_goal = ForeignKeyField(GoalTypeAll)
-    id_type_goal = ForeignKeyField(GoalTypeDefault)
+    type_goal = ForeignKeyField(GoalTypeAll)
+    type_goal_default = ForeignKeyField(GoalTypeDefault)
 
 
 class Goals(BaseModel):
     state = CharField(default="STARTED")
-    id_goals_type = ForeignKeyField(GoalsTypeMapper)
+    goals_type = ForeignKeyField(GoalsTypeMapper)
 
 
 class Followers(BaseModel):
-    id_user_sender = ForeignKeyField(User)
-    id_user_reciever = ForeignKeyField(User)
+    user_sender = ForeignKeyField(User)
+    user_reciever = ForeignKeyField(User)
     state = CharField(default="PENDING")
 
 
@@ -167,8 +167,8 @@ class RecipesBackground(BaseModel):
 
 
 class Comments(BaseModel):
-    id_user = ForeignKeyField(User)
-    id_recipe = ForeignKeyField(Recipe)
+    user = ForeignKeyField(User)
+    recipe = ForeignKeyField(Recipe)
     description = CharField()
     created_date = DateTimeField(default=datetime.now())
     updated_date = DateTimeField(default=datetime.now())
@@ -181,6 +181,7 @@ class Preparation(Model):
 
     class Meta:
         database = db
+
 
 class Nutrition_Information(Model):
     energia = CharField()
@@ -199,7 +200,6 @@ class Nutrition_Information(Model):
 
     class Meta:
         database = db
-
 
 
 # ////////////////////////////old////////////////////////////////////
