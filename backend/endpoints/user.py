@@ -2,6 +2,7 @@ import datetime
 import json
 import math
 
+import peewee
 from flask import request, Response, jsonify
 from flask_restful import reqparse, Resource, abort
 from playhouse.shortcuts import model_to_dict, dict_to_model
@@ -39,12 +40,16 @@ class User(Resource):
         "results": []
     }
 
-    # /recipe
+    # /user
     def get(self):
         args = parser.parse_args()
         # single record
         if args['userUUID']:
-            user_record = UserDB.get(uuid=args['userUUID'])
+            try:
+                user_record = UserDB.get(uuid=args['userUUID'])
+            except peewee.DoesNotExist:
+                return Response(status=400, response="User does not exist...")
+
             userResponse = model_to_dict(user_record)
 
             userResponse['created_date'] = userResponse['created_date'].strftime("%d/%m/%Y, %H:%M:%S")
