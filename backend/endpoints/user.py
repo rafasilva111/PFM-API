@@ -16,7 +16,7 @@ parser.add_argument('id')
 parser.add_argument('userUUID')
 
 PROFILE_TYPE = {"NORMAL", "VIP", "ADMIN"}
-SEXES = {"F", "M"}
+SEXES = {"Masculino", "Feminino","Nao responder"}
 
 USER_ENDPOINT = "user"
 
