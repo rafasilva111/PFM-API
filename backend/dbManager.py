@@ -3,10 +3,10 @@ from datetime import datetime
 from playhouse.flask_utils import object_list
 import mysql
 from peewee import *
-
+from passlib.apps import custom_app_context as pwd_context
 from backend.dtos import RecipeDTO
 from backend.teste import main
-
+from flask_bcrypt import check_password_hash,generate_password_hash
 DATABASE_NAME = 'example'
 HOST = 'localhost'
 PORT = 3306
@@ -25,9 +25,10 @@ class DBManager:
         self.populate_db()
 
     def populate_db(self):
+
         db.create_tables(
             [User, Recipe, RecipesBackground, Comments, Goals, GoalTypeAll, GoalTypeDefault, GoalsTypeMapper, Scheduale,
-             Followers, Tags, Preparation, Nutrition_Information, Ingredients
+             Followers, Tags, Preparation, Nutrition_Information, Ingredients,TokenBlocklist
              ])
 
         RecipeTags = Recipe.tags.get_through_model()
@@ -62,11 +63,11 @@ class BaseModel(Model):
 
 
 class User(BaseModel):
-    uuid = TextField(null=False, unique=True)
     first_name = TextField(null=False)
     last_name = TextField(null=False)
     birth_date = DateTimeField(null=False)
     email = TextField(null=False)
+    password = TextField(null=False)
 
     profile_type = CharField(default="PRIVATE")  # (protect, private, public)
     verified = BooleanField(default=False)
@@ -78,9 +79,15 @@ class User(BaseModel):
 
     activity_level = FloatField(null=True)
     height = FloatField(null=True)
-    sex = CharField(null=False)
+    sex = CharField(null=True)
     weight = FloatField(null=True)
     age = CharField(null=False)
+
+    def hash_password(self,password):
+        return generate_password_hash(password).decode('utf8')
+
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
 
 
 class Tags(Model):
@@ -149,7 +156,7 @@ class Recipe(BaseModel):
     ingredients = ManyToManyField(Ingredients, backref='recipes')
 
     source_rating = FloatField(null=True)
-    source_link = CharField(null=False)
+    source_link = CharField(null=True)
 
 
 class Scheduale(BaseModel):
@@ -161,8 +168,8 @@ class Scheduale(BaseModel):
 
 
 class RecipesBackground(BaseModel):
-    id_user = ForeignKeyField(User)
-    id_recipe = ForeignKeyField(Recipe)
+    user = ForeignKeyField(User)
+    recipe = ForeignKeyField(Recipe)
     type = CharField()  # (liked, saved, created, commented)
 
 
@@ -201,6 +208,13 @@ class Nutrition_Information(Model):
     class Meta:
         database = db
 
+
+class TokenBlocklist(Model):
+    jti = CharField()
+    energia_perc = DateTimeField()
+
+    class Meta:
+        database = db
 
 # ////////////////////////////old////////////////////////////////////
 

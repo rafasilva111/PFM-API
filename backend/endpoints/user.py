@@ -18,7 +18,7 @@ parser.add_argument('userUUID')
 PROFILE_TYPE = {"NORMAL", "VIP", "ADMIN"}
 SEXES = {"Masculino", "Feminino","Nao responder"}
 
-USER_ENDPOINT = "user"
+USER_ENDPOINT = "/user"
 
 
 class User(Resource):
@@ -30,11 +30,8 @@ class User(Resource):
                 "per_page": 20,
                 "total_count": 521,
                 "Links": [
-                    {"self": f"/{USER_ENDPOINT}?page=5&per_page=20"},
-                    {"first": f"/{USER_ENDPOINT}?page=0&per_page=20"},
-                    {"previous": f"/{USER_ENDPOINT}?page=4&per_page=20"},
                     {"next": f"/{USER_ENDPOINT}?page=6&per_page=20"},
-                    {"last": f"/{USER_ENDPOINT}?page=26&per_page=20"},
+                    {"previous": f"/{USER_ENDPOINT}?page=4&per_page=20"}
                 ]
             },
         "results": []
@@ -42,9 +39,14 @@ class User(Resource):
 
     # /user
     def get(self):
+        # Get args
+
         args = parser.parse_args()
-        # single record
+
         if args['userUUID']:
+
+            # Get single user by uuid
+
             try:
                 user_record = UserDB.get(uuid=args['userUUID'])
             except peewee.DoesNotExist:
@@ -57,8 +59,11 @@ class User(Resource):
             userResponse['birth_date'] = userResponse['birth_date'].strftime("%d/%m/%Y")
 
             return Response(status=200, response=json.dumps(userResponse), mimetype="application/json")
-        # all records
+
         else:
+
+            # Get all clients paginated
+
             args = parser.parse_args()
             page = args['page'] if args['page'] else 0
             page_size = int(args['page_size']) if args['page_size'] else 20
@@ -78,20 +83,16 @@ class User(Resource):
                 next_link = page + 1
                 response_holder['_metadata']['Links'].append(
                     {"next": f"/{USER_ENDPOINT}?page={next_link}&page_size={page_size}"},
-                    )
-            if page > total_pages:
+                )
+            if page > 1:
                 previous_link = page - 1
                 response_holder['_metadata']['Links'].append(
                     {"previous": f"/{USER_ENDPOINT}?page={previous_link}&page_size={page_size}"})
 
-            response_holder['_metadata']['Links'].append({"first": f"/{USER_ENDPOINT}?page=1&page_size={page_size}"})
-            response_holder['_metadata']['Links'].append(
-                {"last": f"/{USER_ENDPOINT}?page={total_pages}&page_size={page_size}"})
-
             response_holder['_metadata']['page'] = page
             response_holder['_metadata']['per_page'] = page_size
             response_holder['_metadata']['page_count'] = total_pages
-            response_holder['_metadata']['total_count'] = total_recipes
+            response_holder['_metadata']['recipes_total'] = total_recipes
 
             user = []
             for item in UserDB.select().paginate(page, page_size):
@@ -114,13 +115,6 @@ class User(Resource):
     def post(self):
         data = request.get_json()
 
-        try:
-            if data['uuid'] and data['uuid'] != "":
-                uuid = str(data['uuid']).strip()
-            else:
-                return Response(status=400, response="UUID is missing.\n")
-        except Exception as e:
-            return Response(status=400, response="UUID is missing.\n" + str(e))
 
         try:
             if data['first_name'] and data['first_name'] != "":
@@ -207,7 +201,7 @@ class User(Resource):
             else:
                 return Response(status=400, response="Sex is missing")
         except Exception as e:
-            return Response(status=400, response="Sexo is missing or not in {\n" + str(e))
+            return Response(status=400, response="Sex is missing or not in {\n" + str(e))
 
         try:
             weight = None
@@ -223,7 +217,6 @@ class User(Resource):
             pass
 
         userDB = UserDB()
-        userDB.uuid = uuid
         userDB.first_name = first_name
         userDB.last_name = last_name
         userDB.birth_date = datetime.datetime.strptime(birth_date, "%d/%m/%Y")

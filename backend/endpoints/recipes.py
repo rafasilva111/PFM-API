@@ -2,32 +2,53 @@ import datetime
 import json
 import math
 
+import peewee
 from flask import request, Response, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restful import reqparse, Resource, abort
 
-from backend.dbManager import Recipe as RecipeDB, Preparation, Nutrition_Information, Tags, Ingredients
+from backend.dbManager import Recipe as RecipeDB, Preparation, Nutrition_Information, Tags, Ingredients, \
+    RecipesBackground as RecipesBackgroundDB, User as UserDB
 from backend.dtos import RecipeDTO
+from backend.endpoints.recipe_background import TYPE_CREATED
 
 parser = reqparse.RequestParser()
 parser.add_argument('page')
 parser.add_argument('page_size')
 parser.add_argument('id')
+parser.add_argument('userUUIDF')
 
-RECIPE_ENDPOINT = "recipe"
+RECIPE_ENDPOINT = "/recipe"
+
+response_placeholder = {
+    "_metadata":
+        {
+            "page": 5,
+            "page_count": 20,
+            "per_page": 20,
+            "total_count": 521,
+            "Links": [
+                {"next": f"/{RECIPE_ENDPOINT}?page=6&per_page=20"},
+                {"previous": f"/{RECIPE_ENDPOINT}?page=4&per_page=20"},
+
+            ]
+        },
+    "results": []
+}
+
+
 class Recipe(Resource):
     response_placeholder = {
         "_metadata":
             {
-                "page": 5,
-                "page_count": 20,
+                "page": 1,
+                "page_count": 10,
                 "per_page": 20,
-                "total_count": 521,
+                "recipes_total": 521,
                 "Links": [
-                    {"self": f"/{RECIPE_ENDPOINT}?page=5&per_page=20"},
-                    {"first": f"/{RECIPE_ENDPOINT}?page=0&per_page=20"},
-                    {"previous": f"/{RECIPE_ENDPOINT}?page=4&per_page=20"},
                     {"next": f"/{RECIPE_ENDPOINT}?page=6&per_page=20"},
-                    {"last": f"/{RECIPE_ENDPOINT}?page=26&per_page=20"},
+                    {"previous": f"/{RECIPE_ENDPOINT}?page=4&per_page=20"},
+
                 ]
             },
         "results": []
@@ -54,20 +75,18 @@ class Recipe(Resource):
 
         if page < total_pages:
             next_link = page + 1
-            response_holder['_metadata']['Links'].append({"next": f"/{RECIPE_ENDPOINT}?page={next_link}&page_size={page_size}"},
-                                                         )
-        if page > total_pages:
+            response_holder['_metadata']['Links'].append(
+                {"next": f"/{RECIPE_ENDPOINT}?page={next_link}&page_size={page_size}"},
+            )
+        if page > 1:
             previous_link = page - 1
             response_holder['_metadata']['Links'].append(
                 {"previous": f"/{RECIPE_ENDPOINT}?page={previous_link}&page_size={page_size}"})
 
-        response_holder['_metadata']['Links'].append({"first": f"/{RECIPE_ENDPOINT}?page=1&page_size={page_size}"})
-        response_holder['_metadata']['Links'].append({"last": f"/{RECIPE_ENDPOINT}?page={total_pages}&page_size={page_size}"})
-
         response_holder['_metadata']['page'] = page
         response_holder['_metadata']['per_page'] = page_size
         response_holder['_metadata']['page_count'] = total_pages
-        response_holder['_metadata']['total_count'] = total_recipes
+        response_holder['_metadata']['recipes_total'] = total_recipes
 
         recipes = []
         for item in RecipeDB.select().paginate(page, page_size):
@@ -85,8 +104,17 @@ class Recipe(Resource):
 
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
+    @jwt_required()
     def post(self):
+        # Get json body
+
         data = request.get_json()
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # Parse body
 
         title = None
         try:
@@ -142,11 +170,25 @@ class Recipe(Resource):
                 source_rating = float(data['source_rating'])
         except:
             pass
+
+        try:
+            source_link = None
+            if data['source_link'] and data['source_link'] != '':
+                source_link = float(data['source_link'])
+        except:
+            pass
         try:
             RecipeDB.get(title=title, description=description)
             return Response(status=409, response="An object whit the same title and description already exists...")
         except:
             pass
+
+        # Verify existence of the requested ids model's todo this will be later removed and be directly called by the user id
+
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            return Response(status=400, response="Client uuid couln't be found")
 
         recipeDB = RecipeDB()
         recipeDB.title = title
@@ -157,6 +199,7 @@ class Recipe(Resource):
         recipeDB.portion = portion
         recipeDB.time = time
         recipeDB.source_rating = source_rating
+        recipeDB.source_link = "source_link"  # TODO WHEN RECREATING BD PUT THIS TO NULLABLE
         recipeDB.save()
 
         preparations = []
@@ -238,13 +281,19 @@ class Recipe(Resource):
         for a in preparations:
             a.save()
 
+        recipe_background_created = RecipesBackgroundDB()
+        recipe_background_created.user = user
+        recipe_background_created.recipe = recipeDB
+        recipe_background_created.type = TYPE_CREATED
+        recipe_background_created.save()
+
         return Response(status=201)
 
     def put(self):
         data = request.get_json()[0]
         args = parser.parse_args()
 
-        #validate parameters
+        # validate parameters
 
         try:
             id = args['id']
@@ -256,8 +305,7 @@ class Recipe(Resource):
         except:
             return Response(status=409, response="This id doesnt correspond to any object.")
 
-
-        #validate json
+        # validate json
 
         title = None
         try:

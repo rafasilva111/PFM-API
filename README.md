@@ -84,3 +84,14 @@ Stop and remove the containers
 ```
 $ docker compose down
 ```
+
+
+
+#todo
+To set this value mac/linux can run the command:
+export ENV_FILE_LOCATION=./.env
+and windows user can run the command:
+set ENV_FILE_LOCATION=./.env
+
+# You will need to have redis for logout to work, you can comment that if not needed
+https://redis.io/docs/getting-started/installation/install-redis-on-windows/
