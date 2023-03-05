@@ -1,7 +1,6 @@
 from datetime import timedelta,datetime,timezone
 
 import peewee
-import redis as redis
 from flask import request, Response, Blueprint
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from flask_restful import Resource, reqparse
@@ -15,9 +14,6 @@ parser = reqparse.RequestParser()
 
 auth_blueprint = Blueprint('auth_blueprint', __name__)
 
-jwt_redis_blocklist = redis.StrictRedis(
-    host=HOST, port=6379, db=0, decode_responses=True
-)
 ACCESS_EXPIRES = timedelta(hours=1)
 
 @auth_blueprint.route('/user/register', methods=['POST'])
