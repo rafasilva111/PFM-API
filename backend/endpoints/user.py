@@ -212,7 +212,7 @@ class User(Resource):
 
         try:
             UserDB.get(email=email)
-            return Response(status=409, response="An object whit the same email already exist...")
+            return Response(status=409, response="An object with the same email already exist...")
         except:
             pass
 

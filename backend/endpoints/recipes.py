@@ -9,6 +9,7 @@ from flask_restful import reqparse, Resource, abort
 
 from backend.dbManager import Recipe as RecipeDB, Preparation, Nutrition_Information, Tags, \
     RecipesBackground as RecipesBackgroundDB, User as UserDB
+
 from backend.dtos import RecipeDTO
 from backend.endpoints.recipe_background import TYPE_CREATED
 
@@ -171,8 +172,8 @@ class Recipe(Resource):
             pass
         try:
             source_rating = None
-            if data['source_rating'] and data['source_rating'] != '':
-                source_rating = float(data['source_rating'])
+            if data['rate'] and data['rate'] != '':
+                source_rating = float(data['rate'])
         except:
             pass
 
@@ -213,7 +214,7 @@ class Recipe(Resource):
         try:
             if data['preparation'] and data['preparation'] != {}:
                 for k in data['preparation']:
-                    preparation = Preparation()
+                    preparation = PreparationDB()
                     preparation.step_number = k
                     preparation.description = data['preparation'][k]
                     preparation.recipe = recipeDB
@@ -225,7 +226,7 @@ class Recipe(Resource):
         nutrition_informations = []
         try:
             if data['nutrition_table'] and data['nutrition_table'] != {}:
-                nutrition_information = Nutrition_Information()
+                nutrition_information = Nutrition_InformationDB()
                 nutrition_information.energia = data['nutrition_table']['energia']
                 nutrition_information.energia_perc = data['nutrition_table']['energia_perc']
                 nutrition_information.gordura = data['nutrition_table']['gordura']
@@ -280,10 +281,16 @@ class Recipe(Resource):
         recipeDB.ingredients = ingredients
         recipeDB.save()
 
+        for a in preparations:
+            a.save()
+
         for a in nutrition_informations:
             a.save()
 
-        for a in preparations:
+        for a in tags:
+            a.save()
+
+        for a in ingredients:
             a.save()
 
         # recipe_background_created = RecipesBackgroundDB()
@@ -295,7 +302,7 @@ class Recipe(Resource):
         return Response(status=201)
 
     def put(self):
-        data = request.get_json()[0]
+        data = request.get_json()
         args = parser.parse_args()
 
         # validate parameters
@@ -335,8 +342,8 @@ class Recipe(Resource):
 
         try:
             img_source = None
-            if data['img_source'] and data['img_source'] != '':
-                recipe.img_source = str(data['img_source']).strip()
+            if data['img'] and data['img'] != '':
+                recipe.img_source = str(data['img']).strip()
         except:
             pass
 
@@ -362,16 +369,107 @@ class Recipe(Resource):
             pass
         try:
             source_rating = None
-            if data['source_rating'] and data['source_rating'] != '':
-                recipe.source_rating = float(data['source_rating'])
+            if data['rate'] and data['rate'] != '':
+                recipe.source_rating = float(data['rate'])
+                #TODO condition < 5 rating?
         except:
             pass
+        try:
+            img_source = None
+            if data['img'] and data['img'] != '':
+                recipe.img_source = str(data['img'])
+        except:
+            pass
+        try:
+            source_link = None
+            if data['source'] and data['source'] != '':
+                recipe.source_link = str(data['source'])
+        except:
+            pass
+
+        preparations = []
+
+        try:
+            if data['preparation'] and data['preparation'] != {}:
+                for k in data['preparation']:
+                    preparation, created = PreparationDB.get_or_create(step_number=int(k), recipe_id=id)
+                    preparation.step_number = k
+                    preparation.description = data['preparation'][k]
+                    preparation.recipe = recipe
+                    # preparation.id
+                    preparations.append(preparation)
+        except Exception as e:
+            return Response(status=400, response="Preparation has some error.\n" + str(e))
+
+        nutrition_informations = []
+        try:
+            if data['nutrition_table'] and data['nutrition_table'] != {}:
+                nutrition_information = Nutrition_InformationDB.get(recipe_id=id)
+                nutrition_information.energia = data['nutrition_table']['energia']
+                nutrition_information.energia_perc = data['nutrition_table']['energia_perc']
+                nutrition_information.gordura = data['nutrition_table']['gordura']
+                nutrition_information.gordura_perc = data['nutrition_table']['gordura_perc']
+                nutrition_information.gordura_saturada = data['nutrition_table']['gordura_saturada']
+                nutrition_information.gordura_saturada_perc = data['nutrition_table']['gordura_saturada_perc']
+                nutrition_information.hidratos_carbonos = data['nutrition_table']['hidratos_carbonos']
+                nutrition_information.hidratos_carbonos_acucares = data['nutrition_table']['hidratos_carbonos_acucares']
+                nutrition_information.hidratos_carbonos_acucares_perc = data['nutrition_table'][
+                    'hidratos_carbonos_acucares_perc']
+                nutrition_information.fibra = data['nutrition_table']['fibra']
+                nutrition_information.fibra_perc = data['nutrition_table']['fibra_perc']
+                nutrition_information.proteina = data['nutrition_table']['proteina']
+                nutrition_information.recipe = recipe
+                nutrition_informations.append(nutrition_information)
+        except Exception as e:
+            return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
+
+
+        tags = []
+        # TODO tags update not working
+        try:
+            if data['tags'] and data['tags'] != {}:
+                for t in data['tags']:
+                    tag, created = TagsDB.get_or_create(title=t)
+                    tag.title = t
+                    tag.save()
+                    tag.recipes.add(recipe)
+                    tags.append(tag)
+
+        except Exception as e:
+            return Response(status=400, response="Tags Table has some error.\n" + str(e))
+
+        ingredients = []
+        # TODO ingredients update not working
+        try:
+            if data['ingredients'] and data['ingredients'] != {}:
+                for t in data['ingredients']:
+                    ingridient, created = IngredientsDB.get_or_create(name=t)
+                    ingridient.name = t
+                    ingridient.quantity = data['ingredients'][t]
+                    ingridient.save()
+                    ingridient.recipes.add(recipe)
+                    ingridient.save()
+                    ingredients.append(ingridient)
+        except Exception as e:
+            return Response(status=400, response="Ingridients Table has some error.\n" + str(e))
 
         recipe.updated_date = datetime.datetime.now()
 
         recipe.save()
 
-        return
+        for a in preparations:
+            a.save()
+
+        for a in nutrition_informations:
+            a.save()
+
+        for a in tags:
+            a.save()
+
+        for a in ingredients:
+                a.save()
+
+        return Response(status=200)
 
     def delete(self):
         args = parser.parse_args()

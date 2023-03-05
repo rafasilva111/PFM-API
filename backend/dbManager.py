@@ -8,7 +8,7 @@ from backend.dtos import RecipeDTO
 from backend.teste import main
 from flask_bcrypt import check_password_hash,generate_password_hash
 DATABASE_NAME = 'example'
-HOST = 'localhost'
+HOST = '127.0.0.1'
 PORT = 3306
 USER = "root"
 # pf = open(password_file, 'r')
