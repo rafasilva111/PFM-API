@@ -28,13 +28,12 @@ class DBManager:
 
         db.create_tables(
             [User, Recipe, RecipesBackground, Comments, Goals, GoalTypeAll, GoalTypeDefault, GoalsTypeMapper, Scheduale,
-             Followers, Tags, Preparation, Nutrition_Information, Ingredients,TokenBlocklist
+             Followers, Tags, Preparation, Nutrition_Information,TokenBlocklist
              ])
 
         RecipeTags = Recipe.tags.get_through_model()
-        RecipeIngridients = Recipe.ingredients.get_through_model()
 
-        db.create_tables([RecipeTags, RecipeIngridients])
+        db.create_tables([RecipeTags])
         return
 
 
@@ -101,14 +100,6 @@ class Tags(Model):
         database = db
 
 
-class Ingredients(Model):
-    name = CharField()
-    quantity = CharField(default="")
-
-    class Meta:
-        database = db
-
-
 class GoalTypeAll(BaseModel):
     title = CharField()
     objectivo_cumprido = FloatField(default=0.0)
@@ -155,7 +146,7 @@ class Recipe(BaseModel):
     likes = IntegerField(default=0, null=False)
     views = IntegerField(default=0, null=False)
     tags = ManyToManyField(Tags, backref='recipes')
-    ingredients = ManyToManyField(Ingredients, backref='recipes')
+    ingredients = CharField(null=False)
 
     source_rating = FloatField(null=True)
     source_link = CharField(null=True)

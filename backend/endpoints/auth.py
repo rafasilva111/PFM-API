@@ -6,7 +6,7 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from flask_restful import Resource, reqparse
 from flask_restful.representations import json
 from playhouse.shortcuts import model_to_dict
-from backend.dbManager import Recipe as RecipeDB, Preparation, Nutrition_Information, Tags, Ingredients, User as UserDB, \
+from backend.dbManager import Recipe as RecipeDB, Preparation, Nutrition_Information, Tags, User as UserDB, \
     HOST, TokenBlocklist
 from backend.endpoints.user import PROFILE_TYPE, SEXES
 

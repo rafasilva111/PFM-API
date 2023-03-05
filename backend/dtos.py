@@ -39,12 +39,12 @@ class RecipeDTO():
     views = None
 
     tags = []
-    ingredients = []
+    ingredients = None
     nutrition_information = {}
     preparation = []
 
     def __init__(self, id="", title="", company="", description="", created_date="", updated_date="", img_source=""
-                 , difficulty="", portion="", time="", likes="", source_rating="", views="", tags=[], ingredients=[],
+                 , difficulty="", portion="", time="", likes="", source_rating="", views="", ingredients="", tags=[],
                  nutrition_informations=[], preparations=[]):
         self.id = id
         self.title = title
@@ -59,35 +59,38 @@ class RecipeDTO():
         self.likes = likes
         self.source_rating = source_rating
         self.views = views
-
+        self.ingredients = ingredients
+        helper = []
         for tag in tags:
-            self.tags.append(TagDTO(id=tag.id, title=tag.title).__dict__)
-        self.tags = json.dumps(self.tags)
+            helper.append(tag.title)
 
-        for ingredient in ingredients:
-            self.ingredients.append(
-                {"id":ingredient.id, "name":ingredient.name, "quantity":ingredient.quantity})
-        self.ingredients = json.dumps(self.ingredients)
+        self.tags = helper
 
+        helper = {}
         for preparation in preparations:
-            self.preparation.append(
-                {preparation.step_number: {"id": preparation.id, "description": preparation.description}})
-        self.preparation = json.dumps(self.preparation)
+            helper.update({preparation.step_number: preparation.description})
+        self.preparation = helper
 
         for nt in nutrition_informations:
-            self.nutrition_information ={"energia": nt.energia, "energia_perc": nt.energia_perc, "gordura": nt.gordura,
-                         "gordura_perc": nt.gordura_perc, "gordura_saturada": nt.gordura_saturada,
-                         "gordura_saturada_perc": nt.gordura_saturada_perc, "hidratos_carbonos": nt.hidratos_carbonos,
-                         "hidratos_carbonos_acucares": nt.hidratos_carbonos_acucares,
-                         "hidratos_carbonos_acucares_perc": nt.hidratos_carbonos_acucares_perc, "fibra": nt.fibra,
-                         "fibra_perc": nt.fibra_perc, "proteina": nt.proteina}
+            self.nutrition_information = {"energia": nt.energia, "energia_perc": nt.energia_perc, "gordura": nt.gordura,
+                                          "gordura_perc": nt.gordura_perc, "gordura_saturada": nt.gordura_saturada,
+                                          "gordura_saturada_perc": nt.gordura_saturada_perc,
+                                          "hidratos_carbonos": nt.hidratos_carbonos,
+                                          "hidratos_carbonos_acucares": nt.hidratos_carbonos_acucares,
+                                          "hidratos_carbonos_acucares_perc": nt.hidratos_carbonos_acucares_perc,
+                                          "fibra": nt.fibra,
+                                          "fibra_perc": nt.fibra_perc, "proteina": nt.proteina}
+
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__,
+                          sort_keys=True, indent=4)
 
 
 class UserDTO():
     first_name = None
-    last_name =None
-    birth_date =None
-    email =None
+    last_name = None
+    birth_date = None
+    email = None
 
     profile_type = None  # (protect, private, public)
     verified = None
@@ -101,6 +104,3 @@ class UserDTO():
     altura = None
     sexo = None
     peso = None
-
-    
-

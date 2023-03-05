@@ -7,7 +7,7 @@ from flask import request, Response, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restful import reqparse, Resource, abort
 
-from backend.dbManager import Recipe as RecipeDB, Preparation, Nutrition_Information, Tags, Ingredients, \
+from backend.dbManager import Recipe as RecipeDB, Preparation, Nutrition_Information, Tags, \
     RecipesBackground as RecipesBackgroundDB, User as UserDB
 from backend.dtos import RecipeDTO
 from backend.endpoints.recipe_background import TYPE_CREATED
@@ -16,7 +16,6 @@ parser = reqparse.RequestParser()
 parser.add_argument('page')
 parser.add_argument('page_size')
 parser.add_argument('id')
-parser.add_argument('userUUIDF')
 
 RECIPE_ENDPOINT = "/recipe"
 
@@ -71,18 +70,20 @@ class Recipe(Resource):
 
         total_recipes = int(RecipeDB.select().count())
         total_pages = math.ceil(total_recipes / page_size)
-        response_holder['_metadata']['Links'] = []
+        if total_pages != 1:
+            response_holder['_metadata']['Links'] = []
 
-        if page < total_pages:
-            next_link = page + 1
-            response_holder['_metadata']['Links'].append(
-                {"next": f"/{RECIPE_ENDPOINT}?page={next_link}&page_size={page_size}"},
-            )
-        if page > 1:
-            previous_link = page - 1
-            response_holder['_metadata']['Links'].append(
-                {"previous": f"/{RECIPE_ENDPOINT}?page={previous_link}&page_size={page_size}"})
-
+            if page < total_pages:
+                next_link = page + 1
+                response_holder['_metadata']['Links'].append(
+                    {"next": f"/{RECIPE_ENDPOINT}?page={next_link}&page_size={page_size}"},
+                )
+            if page > 1:
+                previous_link = page - 1
+                response_holder['_metadata']['Links'].append(
+                    {"previous": f"/{RECIPE_ENDPOINT}?page={previous_link}&page_size={page_size}"})
+        else:
+            response_holder['_metadata'].pop('Links')
         response_holder['_metadata']['page'] = page
         response_holder['_metadata']['per_page'] = page_size
         response_holder['_metadata']['page_count'] = total_pages
@@ -90,13 +91,17 @@ class Recipe(Resource):
 
         recipes = []
         for item in RecipeDB.select().paginate(page, page_size):
+            ingredients_array = [a.split(":") for a in item.ingredients.split("//")]
+            ingredients_array.pop(-1)
+            ingredients_dict = dict(ingredients_array)
+
             recipes.append(RecipeDTO(id=item.id, title=item.title, description=item.description,
                                      created_date=item.created_date.strftime("%d/%m/%Y, %H:%M:%S"),
                                      updated_date=item.updated_date.strftime("%d/%m/%Y, %H:%M:%S"),
                                      img_source=item.img_source,
                                      difficulty=item.difficulty, portion=item.portion, time=item.time, likes=item.likes,
                                      source_rating=item.source_rating,
-                                     views=item.views, tags=item.tags, ingredients=item.ingredients,
+                                     views=item.views, tags=item.tags, ingredients=ingredients_dict,
                                      preparations=item.preparations, nutrition_informations=item.nutrition_informations
                                      ).__dict__)
 
@@ -174,7 +179,7 @@ class Recipe(Resource):
         try:
             source_link = None
             if data['source_link'] and data['source_link'] != '':
-                source_link = float(data['source_link'])
+                source_link = data['source_link']
         except:
             pass
         try:
@@ -183,7 +188,7 @@ class Recipe(Resource):
         except:
             pass
 
-        # Verify existence of the requested ids model's todo this will be later removed and be directly called by the user id
+        # Verify existence of the requested ids model's
 
         try:
             pass
@@ -199,8 +204,8 @@ class Recipe(Resource):
         recipeDB.difficulty = difficulty
         recipeDB.portion = portion
         recipeDB.time = time
-        recipeDB.source_rating = source_rating
-        recipeDB.source_link = "source_link"  # TODO WHEN RECREATING BD PUT THIS TO NULLABLE
+        recipeDB.source_rating = source_rating if source_rating else None
+        recipeDB.source_link = source_link if source_link else None # TODO WHEN RECREATING BD PUT THIS TO NULLABLE
         recipeDB.save()
 
         preparations = []
@@ -243,13 +248,14 @@ class Recipe(Resource):
         tags = []
         try:
             if data['tags'] and data['tags'] != {}:
-                for t in data['tags'].split("\\"):
-                    tag = Tags()
-                    tag.title = t
-                    tag.save()
+                for t in data['tags']:
+                    tag,created = Tags.get_or_create(title=t)
+                    if created:
+                        tag.save()
+                        tags.append(tag) #se for criada caso aja um erro entra na lista dos deletes
                     tag.recipes.add(recipeDB)
                     tag.save()
-                    tags.append(tag)
+
 
         except Exception as e:
             recipeDB.delete()
@@ -257,17 +263,12 @@ class Recipe(Resource):
                 a.delete()
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
-        ingredients = []
+        ingredients = ""
         try:
             if data['ingredients'] and data['ingredients'] != {}:
                 for t in data['ingredients']:
-                    ingridient = Ingredients()
-                    ingridient.name = t
-                    ingridient.quantity = data['ingredients'][t]
-                    ingridient.save()
-                    ingridient.recipes.add(recipeDB)
-                    ingridient.save()
-                    ingredients.append(ingridient)
+                    ingredient = f"{t}:{data['ingredients'][t]}//"
+                    ingredients = ingredients + ingredient
         except Exception as e:
             recipeDB.delete()
             for a in tags:
@@ -275,6 +276,9 @@ class Recipe(Resource):
             for a in ingredients:
                 a.delete()
             return Response(status=400, response="Ingridients Table has some error.\n" + str(e))
+
+        recipeDB.ingredients = ingredients
+        recipeDB.save()
 
         for a in nutrition_informations:
             a.save()

@@ -6,7 +6,7 @@ import peewee
 from flask import request, Response, jsonify
 from flask_restful import reqparse, Resource, abort
 from playhouse.shortcuts import model_to_dict, dict_to_model
-from backend.dbManager import Recipe as RecipeDB, Preparation, Nutrition_Information, Tags, Ingredients, User as UserDB
+from backend.dbManager import Recipe as RecipeDB, User as UserDB
 from backend.dtos import RecipeDTO
 
 parser = reqparse.RequestParser()

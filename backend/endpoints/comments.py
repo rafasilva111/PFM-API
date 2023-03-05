@@ -4,7 +4,7 @@ from flask_restful import Resource, reqparse
 from flask_restful.representations import json
 from playhouse.shortcuts import model_to_dict
 
-from backend.dbManager import Recipe as RecipeDB, Preparation, Nutrition_Information, Tags, Ingredients, User as UserDB, \
+from backend.dbManager import Recipe as RecipeDB, User as UserDB, \
     RecipesBackground
 
 parser = reqparse.RequestParser()

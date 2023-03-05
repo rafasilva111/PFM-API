@@ -7,7 +7,7 @@ from flask import request, Response, jsonify
 from flask_restful import reqparse, Resource, abort
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from backend.dbManager import Recipe as RecipeDB, Preparation, Nutrition_Information, Tags, Ingredients, User as UserDB, \
+from backend.dbManager import Recipe as RecipeDB, Preparation, Nutrition_Information, Tags, User as UserDB, \
     RecipesBackground
 from backend.dtos import RecipeDTO
 
@@ -211,7 +211,7 @@ class Recipe_Background_Saves(Resource):
 
         if created:
             recipe_background.save()
-            return Response(status=201, mimetype="application/json")
+            return Response(status=201)
         else:
             return Response(status=400, response="This recipe have been already liked.")
 
