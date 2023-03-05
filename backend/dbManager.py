@@ -37,6 +37,8 @@ class DBManager:
         db.create_tables([RecipeTags, RecipeIngridients])
         return
 
+
+
     def query_titles(self):
         return
 

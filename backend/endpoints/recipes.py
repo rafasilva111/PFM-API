@@ -104,7 +104,7 @@ class Recipe(Resource):
 
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
-    @jwt_required()
+
     def post(self):
         # Get json body
 
@@ -112,7 +112,7 @@ class Recipe(Resource):
 
         # gets user auth id
 
-        user_id = get_jwt_identity()
+        #user_id = get_jwt_identity()
 
         # Parse body
 
@@ -186,7 +186,8 @@ class Recipe(Resource):
         # Verify existence of the requested ids model's todo this will be later removed and be directly called by the user id
 
         try:
-            user = UserDB.get(user_id)
+            pass
+           # user = UserDB.get(user_id)
         except peewee.DoesNotExist:
             return Response(status=400, response="Client uuid couln't be found")
 
@@ -242,7 +243,7 @@ class Recipe(Resource):
         tags = []
         try:
             if data['tags'] and data['tags'] != {}:
-                for t in data['tags']:
+                for t in data['tags'].split("\\"):
                     tag = Tags()
                     tag.title = t
                     tag.save()
@@ -281,11 +282,11 @@ class Recipe(Resource):
         for a in preparations:
             a.save()
 
-        recipe_background_created = RecipesBackgroundDB()
-        recipe_background_created.user = user
-        recipe_background_created.recipe = recipeDB
-        recipe_background_created.type = TYPE_CREATED
-        recipe_background_created.save()
+        # recipe_background_created = RecipesBackgroundDB()
+        # recipe_background_created.user = user
+        # recipe_background_created.recipe = recipeDB
+        # recipe_background_created.type = TYPE_CREATED
+        # recipe_background_created.save()
 
         return Response(status=201)
 

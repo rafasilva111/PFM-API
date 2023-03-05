@@ -197,7 +197,7 @@ def login_user():
 
     authorized = user.check_password(password)
     if not authorized:
-        return Response(status=400, response={'Email or password invalid.'})
+        return Response(status=400, response={'Password incorrect.'})
 
     expires = timedelta(days=7)
     access_token = create_access_token(identity=str(user.id), expires_delta=expires)
@@ -231,4 +231,4 @@ def logout():
     now = datetime.now(timezone.utc)
     token_block_record = TokenBlocklist(jti=jti, created_at=now)
     token_block_record.save()
-    return Response(status=200, response="User logged out sucessfully.")
+    return Response(status=200, response=json.dumps("User logged out sucessfully."))
