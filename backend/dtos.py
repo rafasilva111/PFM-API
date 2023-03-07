@@ -66,9 +66,9 @@ class RecipeDTO():
 
         self.tags = helper
 
-        helper = {}
+        helper = []
         for preparation in preparations:
-            helper.update({preparation.step_number: preparation.description})
+            helper.append(preparation.description)
         self.preparation = helper
 
         for nt in nutrition_informations:

@@ -7,7 +7,7 @@ from flask_restful import reqparse, abort, Api, Resource
 from backend.dbManager import DBManager, TokenBlocklist
 from backend.endpoints.auth import auth_blueprint
 from backend.endpoints.fitness_model import Peso, Calorias, Proteina, Gordura, Hidratos_De_Carbono, Full_Model
-from backend.endpoints.recipes import Recipe, RECIPE_ENDPOINT
+from backend.endpoints.recipes import Recipe, RECIPE_ENDPOINT,recipe_blueprint
 from backend.endpoints.user import User, USER_ENDPOINT, SEXES
 from backend.endpoints.comments import Comments, COMMENTS_ENDPOINT
 from backend.endpoints.recipe_background import *
@@ -48,6 +48,7 @@ api.add_resource(Recipe_Background_Creates, RECIPE_BACKGROUND_CREATES_ENDPOINT)
 api.add_resource(Comments, COMMENTS_ENDPOINT)
 
 app.register_blueprint(auth_blueprint)
+app.register_blueprint(recipe_blueprint)
 
 if __name__ == '__main__':
     #Database

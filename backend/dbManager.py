@@ -150,6 +150,7 @@ class Recipe(BaseModel):
 
     source_rating = FloatField(null=True)
     source_link = CharField(null=True)
+    company = CharField(null=True)
 
 
 class Scheduale(BaseModel):
