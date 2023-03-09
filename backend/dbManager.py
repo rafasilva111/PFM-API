@@ -1,12 +1,12 @@
 import math
 from datetime import datetime
 from playhouse.flask_utils import object_list
-import mysql
 from peewee import *
 from passlib.apps import custom_app_context as pwd_context
 from backend.dtos import RecipeDTO
 from backend.teste import main
-from flask_bcrypt import check_password_hash,generate_password_hash
+from flask_bcrypt import check_password_hash, generate_password_hash
+
 DATABASE_NAME = 'example'
 HOST = '127.0.0.1'
 PORT = 3306
@@ -28,15 +28,10 @@ class DBManager:
 
         db.create_tables(
             [User, Recipe, RecipesBackground, Comments, Goals, GoalTypeAll, GoalTypeDefault, GoalsTypeMapper, Scheduale,
-             Followers, Tags, Preparation, Nutrition_Information,TokenBlocklist
+             Followers, Tags, Preparation, Nutrition_Information, TokenBlocklist,RecipeTag
              ])
 
-        RecipeTags = Recipe.tags.get_through_model()
-
-        db.create_tables([RecipeTags])
         return
-
-
 
     def query_titles(self):
         return
@@ -84,20 +79,17 @@ class User(BaseModel):
     weight = FloatField(null=True)
     age = CharField(null=False)
 
-    def hash_password(self,password):
+    def hash_password(self, password):
         return generate_password_hash(password).decode('utf8')
 
     def check_password(self, password):
         return check_password_hash(self.password, password)
 
 
-class Tags(Model):
+class Tags(BaseModel):
     title = CharField(null=False)
     verified = BooleanField(null=False, default=0)
     cor = CharField(null=True)
-
-    class Meta:
-        database = db
 
 
 class GoalTypeAll(BaseModel):
@@ -145,7 +137,6 @@ class Recipe(BaseModel):
 
     likes = IntegerField(default=0, null=False)
     views = IntegerField(default=0, null=False)
-    tags = ManyToManyField(Tags, backref='recipes')
     ingredients = CharField(null=False)
 
     source_rating = FloatField(null=True)
@@ -175,16 +166,18 @@ class Comments(BaseModel):
     updated_date = DateTimeField(default=datetime.now())
 
 
-class Preparation(Model):
+class Preparation(BaseModel):
     step_number = IntegerField()
     description = CharField()
     recipe = ForeignKeyField(Recipe, backref='preparations')
 
-    class Meta:
-        database = db
+
+class RecipeTag(BaseModel):
+    recipe = ForeignKeyField(Recipe, backref='recipeTag_recipe')
+    tag = ForeignKeyField(Tags, backref='recipeTag_tag')
 
 
-class Nutrition_Information(Model):
+class Nutrition_Information(BaseModel):
     energia = CharField()
     energia_perc = CharField()
     gordura = CharField()
@@ -199,69 +192,10 @@ class Nutrition_Information(Model):
     proteina = CharField()
     recipe = ForeignKeyField(Recipe, backref='nutrition_informations')
 
-    class Meta:
-        database = db
 
-
-class TokenBlocklist(Model):
+class TokenBlocklist(BaseModel):
     jti = CharField()
     energia_perc = DateTimeField()
 
-    class Meta:
-        database = db
 
 # ////////////////////////////old////////////////////////////////////
-
-
-class DBManager_OLD:
-    cursor = None
-
-    def __init__(self, database='example', host="db", user="root", password_file='/run/secrets/db-password'):
-        self.connection = mysql.connector.connect(
-            user=user,
-            password="",  # pf.read(),
-            host="localhost",  # name of the mysql service as set in the docker compose file
-            database=database,
-            auth_plugin='mysql_native_password'
-        )
-        # pf.close()
-        self.cursor = self.connection.cursor()
-
-    def populate_db(self):
-        self.cursor.execute('DROP TABLE IF EXISTS Recipe')
-        # recipe
-        self.cursor.execute("CREATE TABLE `Recipe` (	`id` INT NOT NULL AUTO_INCREMENT,	`title` VARCHAR(255) NOT "
-                            "NULL,	`company` VARCHAR(255),	`description` VARCHAR(255),	`date_create` VARCHAR(255) NOT "
-                            "NULL,	`date_update` VARCHAR(255),	`img_source` VARCHAR(255),	`difficulty` VARCHAR(255) "
-                            "NOT NULL,	`portion` VARCHAR(255) NOT NULL,	`time` VARCHAR(255),	`app_rating` "
-                            "INT,	`source_rating` INT,	`views` INT NOT NULL DEFAULT '0',		PRIMARY KEY ("
-                            "`id`));")
-        # followers
-        self.cursor.execute(
-            "CREATE TABLE `Followers` ( `id` INT NOT NULL AUTO_INCREMENT,	`id_user_sender` INT NOT NULL,	`id_user_reciever` INT NOT "
-            "NULL,	PRIMARY KEY (`id`));")
-        # last recipes seen
-        self.cursor.execute(
-            "CREATE TABLE `Last_seen_recipes` (	`id` INT NOT NULL AUTO_INCREMENT,`id_user` INT NOT NULL,	`id_recipe` INT NOT NULL,	"
-            "`date_create` VARCHAR(255) NOT NULL,	PRIMARY KEY (`id`));")
-        # schedule
-        self.cursor.execute(
-            "CREATE TABLE `Schedule` (	`id` INT NOT NULL AUTO_INCREMENT,`id_user` INT NOT NULL,	`id_recipe` INT NOT NULL,	`date` "
-            "VARCHAR(255) NOT NULL,	`id_goals` INT,	PRIMARY KEY (`id`));")
-        # comments
-        self.cursor.execute(
-            "CREATE TABLE `Comments` (	`id` INT NOT NULL AUTO_INCREMENT, `id_user` INT NOT NULL,	`id_recipe` INT NOT NULL,	`date` "
-            "VARCHAR(255) NOT NULL,	`id_goals` INT,	PRIMARY KEY (`id`));")
-        # recipes
-        self.cursor.execute(
-            "CREATE TABLE `Comments` (`id` INT NOT NULL AUTO_INCREMENT,	`id_user` INT NOT NULL,	`id_recipe` INT NOT NULL,	`date` "
-            "VARCHAR(255) NOT NULL,	`id_goals` INT,	PRIMARY KEY (`id`));")
-
-        self.connection.commit()
-
-    def query_titles(self):
-        self.cursor.execute('SELECT title FROM blog')
-        rec = []
-        for c in self.cursor:
-            rec.append(c[0])
-        return rec

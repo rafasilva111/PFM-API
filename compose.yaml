@@ -28,6 +28,7 @@ services:
     build:
       context: backend
       target: builder
+    command: gunicorn --bind 0.0.0.0:5000 app:app
     restart: always
     secrets:
       - db-password
@@ -39,6 +40,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    environment:
+      - POSTGRES_USER=./.env
 
   proxy:
     build: proxy
