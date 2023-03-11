@@ -138,7 +138,7 @@ def register_user():
     userDB.last_name = last_name
     userDB.password = userDB.hash_password(password)
     userDB.birth_date = birth_date
-    userDB.age = int(datetime.datetime.now().year) - int(userDB.birth_date.year)
+    userDB.age = int(datetime.now().year) - int(userDB.birth_date.year)
     userDB.email = email
     userDB.profile_type = profile_type if profile_type is not None else userDB.profile_type
     userDB.verified = verified

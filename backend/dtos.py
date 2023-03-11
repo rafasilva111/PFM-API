@@ -36,6 +36,7 @@ class RecipeDTO():
 
     likes = None
     source_rating = None
+    source_link = None
     views = None
 
     tags = []
@@ -44,7 +45,7 @@ class RecipeDTO():
     preparation = []
 
     def __init__(self, id="", title="", company="", description="", created_date="", updated_date="", img_source=""
-                 , difficulty="", portion="", time="", likes="", source_rating="", views="", ingredients="", tags=[],
+                 , difficulty="", portion="", time="", likes="", source_rating="",source_link="", views="", ingredients="", tags=[],
                  nutrition_informations=[], preparations=[]):
         self.id = id
         self.title = title
@@ -58,11 +59,16 @@ class RecipeDTO():
         self.time = time
         self.likes = likes
         self.source_rating = source_rating
+        self.source_link = source_link
         self.views = views
-        self.ingredients = ingredients
+
+        ingredients_array = [a.split(":") for a in ingredients.split("//")]
+        ingredients_array.pop(-1)
+
+        self.ingredients = ingredients_array
         helper = []
         for tag in tags:
-            helper.append(tag.title)
+            helper.append(tag.tag.title)
 
         self.tags = helper
 

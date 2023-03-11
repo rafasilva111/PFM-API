@@ -6,10 +6,11 @@ import peewee
 from flask import request, Response, jsonify, Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restful import reqparse, Resource, abort
+from playhouse.shortcuts import model_to_dict
 
 from backend.dbManager import Recipe as RecipeDB, Preparation as PreparationDB, \
     Nutrition_Information as Nutrition_InformationDB, Tags as TagsDB, \
-    RecipesBackground as RecipesBackgroundDB, User as UserDB
+    RecipesBackground as RecipesBackgroundDB, User as UserDB, RecipeTag as RecipeTagDB
 
 from backend.dtos import RecipeDTO
 from backend.endpoints.recipe_background import TYPE_CREATED
@@ -18,6 +19,7 @@ parser = reqparse.RequestParser()
 parser.add_argument('page')
 parser.add_argument('page_size')
 parser.add_argument('id')
+parser.add_argument('string')
 
 RECIPE_ENDPOINT = "/recipe"
 
@@ -66,8 +68,12 @@ class Recipe(Resource):
 
     # /recipe
     def get(self):
+
+        # Get args
+
         args = parser.parse_args()
-        page = int(args['page']) if int(args['page']) else 1
+
+        page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
 
         if page <= 0:
@@ -75,51 +81,108 @@ class Recipe(Resource):
         if page_size not in [5, 10, 20, 40]:
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
-        response_holder = self.response_placeholder
+        ##Pesquisa por String
 
-        # metadata
+        if args['string']:
 
-        total_recipes = int(RecipeDB.select().count())
-        total_pages = math.ceil(total_recipes / page_size)
-        if total_pages != 1:
-            response_holder['_metadata']['Links'] = []
+            # parse arguments
 
-            if page < total_pages:
-                next_link = page + 1
-                response_holder['_metadata']['Links'].append(
-                    {"next": f"/{RECIPE_ENDPOINT}?page={next_link}&page_size={page_size}"},
-                )
-            if page > 1:
-                previous_link = page - 1
-                response_holder['_metadata']['Links'].append(
-                    {"previous": f"/{RECIPE_ENDPOINT}?page={previous_link}&page_size={page_size}"})
+            string_to_search = args['string']
+
+            # get recipes
+
+            query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagDB).join(TagsDB) \
+                .where(TagsDB.title.contains(string_to_search) | RecipeDB.title.contains(string_to_search))
+
+            recipes = []
+            for item in query.paginate(page, page_size):
+                recipes.append(RecipeDTO(id=item.id, title=item.title, description=item.description,
+                                         created_date=item.created_date.strftime("%d/%m/%Y, %H:%M:%S"),
+                                         updated_date=item.updated_date.strftime("%d/%m/%Y, %H:%M:%S"),
+                                         img_source=item.img_source,
+                                         difficulty=item.difficulty, portion=item.portion, time=item.time,
+                                         likes=item.likes,
+                                         source_rating=item.source_rating,source_link=item.source_link,
+                                         views=item.views, tags=item.recipeTag_recipe, ingredients=item.ingredients,
+                                         preparations=item.preparations,
+                                         nutrition_informations=item.nutrition_informations
+                                         ).__dict__)
+
+
+            # Metadata
+
+            response_holder = self.response_placeholder
+            response_holder["recipe_result"] = recipes
+
+            total_recipes = int(query.count())
+            total_pages = math.ceil(total_recipes / page_size)
+            if total_pages != 1:
+                response_holder['_metadata']['Links'] = []
+
+                if page < total_pages:
+                    next_link = page + 1
+                    response_holder['_metadata']['Links'].append(
+                        {"next": f"/{RECIPE_ENDPOINT}?page={next_link}&page_size={page_size}"},
+                    )
+                if page > 1:
+                    previous_link = page - 1
+                    response_holder['_metadata']['Links'].append(
+                        {"previous": f"/{RECIPE_ENDPOINT}?page={previous_link}&page_size={page_size}"})
+            else:
+                try:
+                    response_holder['_metadata'].pop('Links')
+                except Exception as a:
+                    #log
+                    pass
+            response_holder['_metadata']['page'] = page
+            response_holder['_metadata']['per_page'] = page_size
+            response_holder['_metadata']['page_count'] = total_pages
+            response_holder['_metadata']['recipes_total'] = total_recipes
+
+            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
         else:
-            response_holder['_metadata'].pop('Links')
-        response_holder['_metadata']['page'] = page
-        response_holder['_metadata']['per_page'] = page_size
-        response_holder['_metadata']['page_count'] = total_pages
-        response_holder['_metadata']['recipes_total'] = total_recipes
 
-        recipes = []
-        for item in RecipeDB.select().paginate(page, page_size):
-            ingredients_array = [a.split(":") for a in item.ingredients.split("//")]
-            ingredients_array.pop(-1)
+            # metadata
 
+            response_holder = self.response_placeholder
+            total_recipes = int(RecipeDB.select().count())
+            total_pages = math.ceil(total_recipes / page_size)
+            if total_pages != 1:
+                response_holder['_metadata']['Links'] = []
 
-            recipes.append(RecipeDTO(id=item.id, title=item.title, description=item.description,
-                                     created_date=item.created_date.strftime("%d/%m/%Y, %H:%M:%S"),
-                                     updated_date=item.updated_date.strftime("%d/%m/%Y, %H:%M:%S"),
-                                     img_source=item.img_source,
-                                     difficulty=item.difficulty, portion=item.portion, time=item.time, likes=item.likes,
-                                     source_rating=item.source_rating,
-                                     views=item.views, tags=item.tags, ingredients=ingredients_array,
-                                     preparations=item.preparations,
-                                     nutrition_informations=item.nutrition_informations
-                                     ).__dict__)
+                if page < total_pages:
+                    next_link = page + 1
+                    response_holder['_metadata']['Links'].append(
+                        {"next": f"/{RECIPE_ENDPOINT}?page={next_link}&page_size={page_size}"},
+                    )
+                if page > 1:
+                    previous_link = page - 1
+                    response_holder['_metadata']['Links'].append(
+                        {"previous": f"/{RECIPE_ENDPOINT}?page={previous_link}&page_size={page_size}"})
+            else:
+                response_holder['_metadata'].pop('Links')
+            response_holder['_metadata']['page'] = page
+            response_holder['_metadata']['per_page'] = page_size
+            response_holder['_metadata']['page_count'] = total_pages
+            response_holder['_metadata']['recipes_total'] = total_recipes
 
-        response_holder["recipe_result"] = recipes
+            recipes = []
+            for item in RecipeDB.select().paginate(page, page_size):
+                recipes.append(RecipeDTO(id=item.id, title=item.title, description=item.description,
+                                         created_date=item.created_date.strftime("%d/%m/%Y, %H:%M:%S"),
+                                         updated_date=item.updated_date.strftime("%d/%m/%Y, %H:%M:%S"),
+                                         img_source=item.img_source,
+                                         difficulty=item.difficulty, portion=item.portion, time=item.time,
+                                         likes=item.likes,
+                                         source_rating=item.source_rating,source_link=item.source_link,
+                                         views=item.views, tags=item.recipeTag_recipe, ingredients=item.ingredients,
+                                         preparations=item.preparations,
+                                         nutrition_informations=item.nutrition_informations
+                                         ).__dict__)
 
-        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+            response_holder["recipe_result"] = recipes
+
+            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
     @jwt_required()
     def post(self):
@@ -263,16 +326,19 @@ class Recipe(Resource):
                     if created:
                         tag.save()
                         tags.append(tag)  # se for criada caso aja um erro entra na lista dos deletes
-                    tag.recipes.add(recipeDB)
                     tag.save()
+                    recipe_tag = RecipeTagDB.create(recipe_id=recipeDB.id, tag_id=tag.id)
+                    recipe_tag.save()
+
         except Exception as e:
-            recipeDB.delete()
+
             for a in preparations:
                 a.delete()
             for a in nutrition_informations:
                 a.delete()
             for a in tags:
                 a.delete()
+            recipeDB.delete()
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
         ingredients = ""
@@ -628,17 +694,19 @@ def recipe_bulk_insert():
                 if created:
                     tag.save()
                     tags.append(tag)  # se for criada caso aja um erro entra na lista dos deletes
-                tag.recipes.add(recipeDB)
                 tag.save()
+                recipe_tag = RecipeTagDB.create(recipe_id=recipeDB.id, tag_id=tag.id)
+                recipe_tag.save()
+
     except Exception as e:
-        recipeDB.delete()
+
         for a in preparations:
             a.delete()
         for a in nutrition_informations:
             a.delete()
         for a in tags:
             a.delete()
-
+        recipeDB.delete()
         return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
     ingredients = ""
