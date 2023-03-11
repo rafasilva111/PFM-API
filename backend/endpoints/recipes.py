@@ -212,8 +212,8 @@ class Recipe(Resource):
 
         try:
             img_source = None
-            if data['img_source'] and data['img_source'] != '':
-                img_source = str(data['img_source']).strip()
+            if data['img'] and data['img'] != '':
+                img_source = str(data['img']).strip()
         except:
             pass
 
@@ -501,7 +501,7 @@ class Recipe(Resource):
             return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
 
         tags = []
-        # TODO tags update not working
+        # TODO tags update working by adding but doesnt delete the ones wich arent passed in the request
         try:
             if data['tags'] and data['tags'] != {}:
                 for t in data['tags']:
@@ -510,24 +510,34 @@ class Recipe(Resource):
                     if created:
                         tag.save()
                         tags.append(tag)  # se for criada caso aja um erro entra na lista dos deletes
-                    tag.recipes.add(recipe)
-                    tag.save()
+                        recipe_tag = RecipeTagDB.create(recipe_id=recipe.id, tag_id=tag.id)
+                        recipe_tag.save()
+                    else:
+                        tag.save()
+
 
         except Exception as e:
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
-        ingredients = []
         # TODO ingredients update not working
+        ingredients = ""
         try:
             if data['ingredients'] and data['ingredients'] != {}:
                 for t in data['ingredients']:
                     ingredient = f"{t}:{data['ingredients'][t]}//"
                     ingredients = ingredients + ingredient
         except Exception as e:
+            recipe.delete()
+            for a in preparations:
+                a.delete()
+            for a in tags:
+                a.delete()
+            for a in nutrition_informations:
+                a.delete()
             return Response(status=400, response="Ingridients Table has some error.\n" + str(e))
 
+        recipe.ingredients = ingredients
         recipe.updated_date = datetime.datetime.now()
-
         recipe.save()
 
         for a in preparations:
@@ -537,9 +547,6 @@ class Recipe(Resource):
             a.save()
 
         for a in tags:
-            a.save()
-
-        for a in ingredients:
             a.save()
 
         return Response(status=200)
