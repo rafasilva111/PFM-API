@@ -41,7 +41,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      - POSTGRES_USER=./.env
+      - ENV_FILE_LOCATION=./.env
 
   proxy:
     build: proxy
