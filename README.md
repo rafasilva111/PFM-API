@@ -1,94 +1,129 @@
-## Compose sample application
+**Author: Facundo Padilla**
 
-### Use with Docker Development Environments
+**Social networks:**
 
-You can open this sample in the Dev Environments feature of Docker Desktop version 4.12 or later.
+- Facebook: https://www.facebook.com/facundodeveloper
 
-[Open in Docker Dev Environments <img src="../open_in_new.svg" alt="Open in Docker Dev Environments" align="top"/>](https://open.docker.com/dashboard/dev-envs?url=https://github.com/docker/awesome-compose/tree/master/nginx-flask-mysql)
+- Instagram: https://www.instagram.com/facundodeveloper
 
-### Python/Flask with Nginx proxy and MySQL database
+- LinkedIn: https://www.linkedin.com/in/facundopadilla
 
-Project structure:
-```
-.
-├── compose.yaml
-├── flask
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── server.py
-└── nginx
-    └── nginx.conf
+- Udemy: https://www.udemy.com/user/facundo-padilla/
 
-```
+# **Version:**
 
-[_compose.yaml_](compose.yaml)
-```
-services:
-  backend:
-    build:
-      context: backend
-      target: builder
-    ...
-  db:
-    # We use a mariadb image which supports both amd64 & arm64 architecture
-    image: mariadb:10-focal
-    # If you really want to use MySQL, uncomment the following line
-    #image: mysql:8
-    ...
-  proxy:
-    build: proxy
-    ...
-```
-The compose file defines an application with three services `proxy`, `backend` and `db`.
-When deploying the application, docker compose maps port 80 of the proxy service container to port 80 of the host as specified in the file.
-Make sure port 80 on the host is not already being in use.
+- 1.0: 
+	- 01/02/2021 (DD-MM-YYYY)
+	-  02/01/2021 (MM-DD-YYYY)
+	-  2021/02/01 (YYYY-MM-DDDD)
 
-> ℹ️ **_INFO_**  
-> For compatibility purpose between `AMD64` and `ARM64` architecture, we use a MariaDB as database instead of MySQL.  
-> You still can use the MySQL image by uncommenting the following line in the Compose file   
-> `#image: mysql:8`
+# What is this?:
 
-## Deploy with docker compose
+- This Flask project is reusable and also an example of how to merge *Flask, Docker, Nginx, Gunicorn, MySQL, new: Flask-RESTX,  Factory Method design pattern,* and other optional dependencies such as D*ynaconf, Marshmallow, SQLAlchemy, Faker, PyMySQL, Pytest, etc...* which are installed inside the virtual environment "*env_flask*".
 
-```
-$ docker compose up -d
-Creating network "nginx-flask-mysql_default" with the default driver
-Pulling db (mysql:8.0.19)...
-5.7: Pulling from library/mysql
-...
-...
-WARNING: Image for service proxy was built because it did not already exist. To rebuild this image you must use `docker-compose build` or `docker-compose up --build`.
-Creating nginx-flask-mysql_db_1 ... done
-Creating nginx-flask-mysql_backend_1 ... done
-Creating nginx-flask-mysql_proxy_1   ... done
-```
+# How to use it?
 
-## Expected result
+- Easy, if you have Docker Compose installed, just run the following command inside the project directory: *docker-compose up*
 
-Listing containers should show three containers running and the port mapping as below:
-```
-$ docker compose ps
-NAME                          COMMAND                  SERVICE             STATUS              PORTS
-nginx-flask-mysql-backend-1   "flask run"              backend             running             0.0.0.0:8000->8000/tcp
-nginx-flask-mysql-db-1        "docker-entrypoint.s…"   db                  running (healthy)   3306/tcp, 33060/tcp
-nginx-flask-mysql-proxy-1     "nginx -g 'daemon of…"   proxy               running             0.0.0.0:80->80/tcp
-```
+- You can also use the commands created inside the "Makefile" file, simply by executing the "make" command; make [OPTION] - Example: *make full-start*
 
-After the application starts, navigate to `http://localhost:80` in your web browser or run:
-```
-$ curl localhost:80
-<div>Blog post #1</div><div>Blog post #2</div><div>Blog post #3</div><div>Blog post #4</div>
-```
+- Once you execute any of these commands, it starts to create the containers to work, they are already linked so you should have no problems to get it to work
+- Once you have finished running and creating the containers, simply go to http://localhost:80/
 
-Stop and remove the containers
-```
-$ docker compose down
-```
+# Initialize application:
 
+- After you have executed the commands like *docker-compose up, make full-start* or whatever you have created in the Makefile or used, it automatically creates the tables and works without problems, the tables are created in the predefined database with the name "*flask_api*", if you want to change the name of this database just go to the file "docker-compose.yaml" and change the environment variable "*MYSQL_DATABASE*". 
 
+- And that's it, once the tables are created, you only have to go to http://localhost:80 (Nginx)
 
-#todo
-To set this value mac/linux can run the command:
-export ENV_FILE_LOCATION=./.env
-and windows user can run the command:
-set ENV_FILE_LOCATION=./.env
+# "Hot-Reloading":
+
+- You could use Watchman to do hot-reaload, but it gives some problems/bugs, so you can directly work with the virtual environment "*env_flask*" and start working there to simulate a hot-reload, also, it is not recommended that a container contains integrated hot-realoading if it is going to be used for hot-reloading.
+
+- **How to activate env_flask**:
+
+	- **Linux / PowerShell**:
+		
+		1) Run: pip3 install virtualenv && python3 -m virtualenv env_flask
+		2) Enter directory *../env_flask/bin/activate* and execute: **source activate** (in the terminal)
+		3) Return to the path where **run_debug.py** is found, and run: pip install -r requirements.txt
+		4) Run the following commands:
+			- *export FLASK_APP=run_debug.py*
+			- *flask run -h 0.0.0.0 -p 5001*(the host and port can be changed to the one you want)
+			or
+			- *python run_debug.py*
+
+	- **Windows:**
+		
+		1) Run: pip3 install virtualenv && python3 -m virtualenv env_flask
+		2) Enter directory ../env_flask/bin/activate and execute: **activate** in CMD
+		3) Return to the path where **run_debug.py** is found, and run: pip install -r requirements.txt
+		4) Run the following commands:
+			- *set FLASK_APP=run_debug.py*
+			- *flask run -h 0.0.0.0 -p 5001* (the host and port can be changed to the one you want)
+			or
+			- *python run_debug.py*
+			
+**ATTENTION:** in the Dynaconf configuration file (*settings.toml*), when running the *run_debug.py* , the MySQL connection points to *localhost* and port *3307*, if it is going to be uploaded to production, remove the "expose" option from the docker-file.yaml file.
+
+- **Deactivate the virtual environment:**
+
+	- Execute *deactivate* in the terminal or CMD
+
+# Settings:
+
+- **docker-compose.yaml:**
+
+	- **MySQL (db)**:
+
+		- MYSQL_USER: the user name you want to customize (the root user is default and cannot be deleted)
+
+		- MYSQL_PASSWORD= the password of the user (not the root)
+
+		- MYSQL_DATABASE= name of the database you want
+
+		- MYSQL_ROOT_PASSWORD= root user password
+
+		- More documentation: https://hub.docker.com/_/mysql
+
+	- **Flask (flask_app)**:
+
+		- PYTHONBUFFERED= by default leave it set to 1, it is used to display Python logs.
+
+		- ENVVAR_PREFIX_FOR_DYNACONF= the name of our module
+
+		- ENVVAR_FOR_DYNACONF= file name with extension ".toml", Dynaconf supports several others: https://dynaconf.readthedocs.io/en/docs_223/guides/examples.html
+
+		- FLASK_APP= the name of the Python file to be executed by the server
+
+		- FLASK_RUN_HOST= the host address of the application, defaulting to 0.0.0.0
+
+		- FLASK_DEBUG= WARNING!, 1 enables debug, 0 for production.
+
+		- command: Gunicorn command to execute
+
+		- More documentation: https://hub.docker.com/_/python
+
+	- **Nginx (nginx lol)**:
+
+		- Read the docs: https://hub.docker.com/_/nginx
+
+- **settings.toml (Dynaconf file):**
+	- [default]
+		- SQLALCHEMY_TRACK_MODIFICATIONS = "False" (is a setting that is no longer used, leave it at false)
+	- [development]:
+		> When you switch to debug mode, the db name becomes localhost and port 3307.
+		- DEBUG = "True"
+		- SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:password@localhost:port/db_name"
+		
+	- [production]:
+		> When in production, mostly in the docker, it keeps running this configuration
+		- DEBUG = "False"
+		- SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:password@db_container_name/db_name"
+
+# python run.py vs flask run:
+
+- The difference between using Python to execute "run.py" and using "flask run", is that when you have the file "\_\_module__.py" in the project, Python automatically adds it to the "syspath", in the case of "flask run", this does not happen, even if there is the "\_\_init__.py" and the "\_\_module__.py" , so to avoid problems when working with flask run, in each \_\_init__.py file the following code fragment is added:
+
+	    import sys
+	    sys.path.append(".")

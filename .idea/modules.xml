@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/PFM_Flask_API.iml" filepath="$PROJECT_DIR$/.idea/PFM_Flask_API.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/PFM_Flask_API_Prod.iml" filepath="$PROJECT_DIR$/.idea/PFM_Flask_API_Prod.iml" />
     </modules>
   </component>
 </project>
