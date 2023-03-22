@@ -1,16 +1,18 @@
-from peewee import CharField, IntegerField, ManyToManyField
+from peewee import CharField, IntegerField, ManyToManyField, BooleanField
 
 from flask_app.ext.schema import ma
-from flask_app.models.base_model import BaseModel
 from flask_app.models.model_recipe import Recipe
+from flask_app.models.base_model import BaseModel
 
 
 # Database
 
 class Tag(BaseModel):
-    step_number = IntegerField()
-    description = CharField()
-    recipe = ManyToManyField(Recipe, backref='tags')
+    title = CharField(null=False, unique=True)
+    recipes = ManyToManyField(Recipe, backref='tags')
+
+
+RecipeTagThrough = Recipe.tags.get_through_model()
 
 
 # Schema

@@ -1,11 +1,35 @@
-from flask_restx import Namespace, Resource, fields, abort
-from flask_app.ext.database import db
+import json
+import math
+from datetime import datetime, timezone
+
+import peewee
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask_restx import Namespace, Resource, fields, abort, reqparse
+from flask import Response, request
+from marshmallow import ValidationError
+from playhouse.shortcuts import model_to_dict
+
+from ...models import TokenBlocklist
+from ...models.model_metadata import MetadataSchema, build_metadata
+from ...models.model_recipe import Recipe as RecipeDB, RecipeSchema
+from ...models.model_tag import Tag as TagDB, RecipeTagThrough as RecipeTagThroughDB
+from ...models.model_user import User as UserDB
+from ...models.model_recipe_background import RecipeBackground as RecipeBackgroundDB
+from ...models.model_nutrition_information import NutritionInformation as NutritionInformationDB
 from .errors import return_error_sql, school_no_exists
 
 # Create name space
 api = Namespace("Schools", description="Here are all School endpoints")
 
-BASE_RECIPE_PREFIX = "/recipe"
+# Create params for pagination
+
+parser = api.parser()
+parser.add_argument('page', type=int, help='The page number.')
+parser.add_argument('page_size', type=int, help='The page size.')
+parser.add_argument('id', type=str, help='The string to be search.')
+parser.add_argument('string', type=str, help='The string to be search.')
+
+RECIPE_ENDPOINT = "/recipe"
 
 # School API Model
 school_api_full_model = api.model("School model", {
@@ -29,194 +53,243 @@ school_api_model = api.model("School model", {
 
 
 # Create resources
-@api.route("/")
-@api.doc("get_school", model=school_api_full_model)
+@api.route("/list")
+@api.doc("get_recipe_list", model=school_api_full_model)
 class RecipeListResource(Resource):
 
+    @api.expect(parser)
     def get(self):
         """List all schools"""
         # Get args
 
         args = parser.parse_args()
 
+        string_to_search = args['string']
         page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
+
+        # validate args
 
         if page <= 0:
             return Response(status=400, response="page cant be negative")
         if page_size not in [5, 10, 20, 40]:
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
-        ##Pesquisa por String
+        ## Pesquisa por String
 
-        if args['string']:
+        if string_to_search:
 
-            # parse arguments
+            # declare response holder
 
-            string_to_search = args['string']
+            response_holder = {}
 
-            # get recipes
+            # build query
 
-            query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagDB).join(TagsDB) \
-                .where(TagsDB.title.contains(string_to_search) | RecipeDB.title.contains(string_to_search))
+            # respons data
 
-            recipes = []
-            for item in query.paginate(page, page_size):
-                recipes.append(RecipeDTO(id=item.id, title=item.title, description=item.description,
-                                         created_date=item.created_date.strftime("%d/%m/%Y, %H:%M:%S"),
-                                         updated_date=item.updated_date.strftime("%d/%m/%Y, %H:%M:%S"),
-                                         img_source=item.img_source,
-                                         difficulty=item.difficulty, portion=item.portion, time=item.time,
-                                         likes=item.likes,
-                                         source_rating=item.source_rating, source_link=item.source_link,
-                                         views=item.views, tags=item.recipeTag_recipe, ingredients=item.ingredients,
-                                         preparations=item.preparations,
-                                         nutrition_informations=item.nutrition_informations
-                                         ).__dict__)
+            query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
+                .where(TagDB.title.contains(string_to_search) | RecipeDB.title.contains(string_to_search))
 
-            # Metadata
-
-            response_holder = self.response_placeholder
-            response_holder["recipe_result"] = recipes
+            # metadata
 
             total_recipes = int(query.count())
             total_pages = math.ceil(total_recipes / page_size)
-            if total_pages != 1:
-                response_holder['_metadata']['Links'] = []
+            metadata = build_metadata(page, page_size, total_pages, total_recipes, RECIPE_ENDPOINT)
+            response_holder["_metadata"] = metadata
 
-                if page < total_pages:
-                    next_link = page + 1
-                    response_holder['_metadata']['Links'].append(
-                        {"next": f"/{RECIPE_ENDPOINT}?page={next_link}&page_size={page_size}"},
-                    )
-                if page > 1:
-                    previous_link = page - 1
-                    response_holder['_metadata']['Links'].append(
-                        {"previous": f"/{RECIPE_ENDPOINT}?page={previous_link}&page_size={page_size}"})
-            else:
-                try:
-                    response_holder['_metadata'].pop('Links')
-                except Exception as a:
-                    # log
-                    pass
-            response_holder['_metadata']['page'] = page
-            response_holder['_metadata']['per_page'] = page_size
-            response_holder['_metadata']['page_count'] = total_pages
-            response_holder['_metadata']['recipes_total'] = total_recipes
+            # response data
+
+            recipes = []
+            for item in query.paginate(page, page_size):
+                recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
+                recipes.append(RecipeSchema().dump(recipe))
+
+            response_holder["result"] = recipes
 
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
         else:
 
+            # declare response holder
+
+            response_holder = {}
+
             # metadata
 
-            response_holder = self.response_placeholder
             total_recipes = int(RecipeDB.select().count())
             total_pages = math.ceil(total_recipes / page_size)
-            if total_pages != 1:
-                response_holder['_metadata']['Links'] = []
+            metadata = build_metadata(page, page_size, total_pages, total_recipes, RECIPE_ENDPOINT)
+            response_holder["_metadata"] = metadata
 
-                if page < total_pages:
-                    next_link = page + 1
-                    response_holder['_metadata']['Links'].append(
-                        {"next": f"/{RECIPE_ENDPOINT}?page={next_link}&page_size={page_size}"},
-                    )
-                if page > 1:
-                    previous_link = page - 1
-                    response_holder['_metadata']['Links'].append(
-                        {"previous": f"/{RECIPE_ENDPOINT}?page={previous_link}&page_size={page_size}"})
-            else:
-                response_holder['_metadata'].pop('Links')
-            response_holder['_metadata']['page'] = page
-            response_holder['_metadata']['per_page'] = page_size
-            response_holder['_metadata']['page_count'] = total_pages
-            response_holder['_metadata']['recipes_total'] = total_recipes
+            # response data
 
             recipes = []
             for item in RecipeDB.select().paginate(page, page_size):
-                recipes.append(RecipeDTO(id=item.id, title=item.title, description=item.description,
-                                         created_date=item.created_date.strftime("%d/%m/%Y, %H:%M:%S"),
-                                         updated_date=item.updated_date.strftime("%d/%m/%Y, %H:%M:%S"),
-                                         img_source=item.img_source,
-                                         difficulty=item.difficulty, portion=item.portion, time=item.time,
-                                         likes=item.likes,
-                                         source_rating=item.source_rating, source_link=item.source_link,
-                                         views=item.views, tags=item.recipeTag_recipe, ingredients=item.ingredients,
-                                         preparations=item.preparations,
-                                         nutrition_informations=item.nutrition_informations
-                                         ).__dict__)
+                recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
+                recipes.append(RecipeSchema().dump(recipe))
 
-            response_holder["recipe_result"] = recipes
+            response_holder["result"] = recipes
 
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
-    @api.expect(school_api_full_model)
     def post(self):
-        """Add new school"""
+        # TODO bulk import method, will only be used by admin to populate company's recipe
+
+        Response(status=200, response="Not implemented yet.")
+
+
+@api.route("")
+class RecipeResource(Resource):
+
+    def get(self):
+        """ Get a recipe with ID """
+
+        # Get args
+
+        args = parser.parse_args()
+
+        # Validate args
+
+        if not args["id"]:
+            return Response(status=400, response="Invalid arguments...")
+
         try:
-            api.payload["students"] = list(map(int, api.payload["students"]))
-            students = Student.query.filter(Student.id.in_(set(api.payload["students"]))).all()
-            api.payload["students"] = students
-            new_school = School(**api.payload)
-            db.session.add(new_school)
-            db.session.commit()
-            schema = SchoolSchema(many=True)
-            return {"message": "School was successfully added", "content": [schema.dump(api.payload)]}, 200
+            recipe_record = RecipeDB.get(id=args["id"])
+            schema = RecipeSchema().dump(recipe_record)
+        except peewee.DoesNotExist:
+            return Response(status=400, response="Recipe does not exist...")
+
+        return Response(status=200, response=schema, mimetype="application/json")
+
+    @jwt_required()
+    def post(self):
+        """ Post a recipe by user """
+
+        json_data = request.get_json()
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # Validate args by loading it into schema
+
+        try:
+            recipe_validated = RecipeSchema().load(json_data)
+        except ValidationError as err:
+            return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
+
+        # Verify existence of the requested ids model's
+
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+
+            # Otherwise block user token (user cant be logged in and stil reach this far)
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            return Response(status=400, response="Client couln't be found by this id.")
+
+        # Change get or create needed objects
+        # removing because the must be transformed before entity building
+        nutrition_table = recipe_validated.pop('nutrition_informations')
+        preparation = recipe_validated.pop('preparation')
+        ingredients = recipe_validated.pop('ingredients')
+        tags = recipe_validated.pop('tags')
+
+        # fills recipe object
+        recipe = RecipeDB(**recipe_validated)
+        recipe.preparation = str(preparation).encode()
+        recipe.ingredients = str(ingredients).encode()
+        # use .decode() to decode
+        recipe.save()
+
+        # build relation to nutrition_table
+
+        try:
+            if nutrition_table and nutrition_table != {}:
+                nutrition_information = NutritionInformationDB(**nutrition_table)
+                nutrition_information.recipe = recipe
+                nutrition_information.save()
+                recipe.nutrition_informations = nutrition_information
+
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
+
+        # build relation to recipe_background
+
+        try:
+            recipe_background = RecipeBackgroundDB()
+            recipe_background.user = user
+            recipe_background.recipe = recipe
+            recipe_background.type = "CREATED"
+            recipe_background.save()
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            return Response(status=400, response="Tags Table has some error.\n" + str(e))
+
+        # build multi to multi relation to tags
+
+        try:
+            if tags and tags != {}:
+                for t in tags:
+                    tag, created = TagDB.get_or_create(title=t)
+                    tag.save()
+                    recipe.tags.add(tag)
+
+
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            return Response(status=400, response="Tags Table has some error.\n" + str(e))
+
+        # finally build full object
+
+        recipe.save()
+
+        return Response(status=201)
+
+    def delete(self, id):
+        """Delete a recipe by ID"""
+        try:
+            recipe = School.query.get(id)
+            if recipe is not None:
+                db.session.delete(recipe)
+                db.session.commit()
+                schema = SchoolSchema()
+                return {"message": "School was successfully added", "content": [schema.jsonify(school)]}
+            return school_no_exists(id)
         except Exception as e:
             return return_error_sql(e)
 
-# @api.route("/<int:id>")
-# @api.param('id', 'the ID of the school you want to obtain')
-# class SchoolResource(Resource):
-#
-#     def get(self, id):
-#         """ Get a school with ID """
-#         school = School.query.get(id)
-#         if school is not None:
-#             schema = SchoolSchema()
-#             return schema.dump(school)
-#         return school_no_exists(id)
-#
-#     def delete(self, id):
-#         """Delete a school by ID"""
-#         try:
-#             school = School.query.get(id)
-#             if school is not None:
-#                 db.session.delete(school)
-#                 db.session.commit()
-#                 schema = SchoolSchema()
-#                 return {"message": "School was successfully added", "content": [schema.jsonify(school)]}
-#             return school_no_exists(id)
-#         except Exception as e:
-#             return return_error_sql(e)
-#
-#     @api.expect(school_api_model)
-#     def put(self, id):
-#         """Put a school by ID"""
-#         try:
-#             if len(dict(**api.payload)) == len(school_api_model.keys()):
-#                 school = School.query.filter_by(id=id).update(dict(**api.payload))
-#                 if school:
-#                     db.session.commit()
-#                     return {"message": "Updated successfully"}
-#                 return school_no_exists(id)
-#             else:
-#                 intersection = set(school_api_model.keys()).difference(set(api.payload.keys()))
-#                 return {
-#                            "message": f"You are missing the following fields to be able to perform the PUT method: {intersection}"}, 400
-#         except Exception as e:
-#             return return_error_sql(e)
-#
-#     @api.expect(school_api_model)
-#     def patch(self, id):
-#         """Patch a school by ID"""
-#         try:
-#             if api.payload:
-#                 school = School.query.filter_by(id=id).update(dict(**api.payload))
-#                 if school:
-#                     db.session.commit()
-#                     return {"message": "Updated successfully"}
-#                 return school_no_exists(id)
-#             return {
-#                        "message": f"You must have at least one of all of the following fields: {set(school_api_model.keys())}"}, 400
-#         except Exception as e:
-#             return return_error_sql(e)
+    @api.expect(school_api_model)
+    def put(self, id):
+        """Put a school by ID"""
+        try:
+            if len(dict(**api.payload)) == len(school_api_model.keys()):
+                school = School.query.filter_by(id=id).update(dict(**api.payload))
+                if school:
+                    db.session.commit()
+                    return {"message": "Updated successfully"}
+                return school_no_exists(id)
+            else:
+                intersection = set(school_api_model.keys()).difference(set(api.payload.keys()))
+                return {
+                           "message": f"You are missing the following fields to be able to perform the PUT method: {intersection}"}, 400
+        except Exception as e:
+            return return_error_sql(e)
+
+    @api.expect(school_api_model)
+    def patch(self, id):
+        """Patch a recipe by ID"""
+        try:
+            if api.payload:
+                recipe = School.query.filter_by(id=id).update(dict(**api.payload))
+                if recipe:
+                    db.session.commit()
+                    return {"message": "Updated successfully"}
+                return school_no_exists(id)
+            return {
+                       "message": f"You must have at least one of all of the following fields: {set(school_api_model.keys())}"}, 400
+        except Exception as e:
+            return return_error_sql(e)

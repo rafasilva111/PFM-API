@@ -22,6 +22,10 @@ class NutritionInformation(BaseModel):
     proteina = CharField()
     recipe = ForeignKeyField(Recipe, backref='nutrition_informations')
 
+    class Meta:
+
+        db_table = 'nutrition_information'
+
 
 # Schemas
 

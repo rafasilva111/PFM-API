@@ -6,6 +6,7 @@ from flask_bcrypt import generate_password_hash
 from flask_app.models.base_model import BaseModel
 from flask_app.ext.schema import ma
 
+
 # Schemas
 
 class LoginSchema(Schema):
@@ -20,10 +21,12 @@ class LoginSchema(Schema):
             raise ma.ValidationError('Invalid email address.')
 
 
-
-
 # Database
 
 class TokenBlocklist(BaseModel):
+
     jti = CharField()
     created_at = DateTimeField(default=datetime.now())
+
+    class Meta:
+        db_table = 'token_block_list'

@@ -1,7 +1,12 @@
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, Resource, fields, reqparse
 from flask_app.models.model_student import Student, StudentSchema
 from flask_app.ext.database import db
 from .errors import return_error_sql, student_no_exists
+
+
+parser = reqparse.RequestParser()
+parser.add_argument('page')
+parser.add_argument('page_size')
 
 # Create name space
 api = Namespace("Students", description="Here are all Student endpoints")
