@@ -26,4 +26,3 @@ flask_bcrypt
 toml~=0.10.2
 peewee~=3.16.0
 psycopg2-binary
-
