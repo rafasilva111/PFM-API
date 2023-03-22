@@ -27,5 +27,5 @@ This creates a bidirectional relationship between Order and Customer classes whe
 
 
 
-
+PYTHONUNBUFFERED=1,FLASK_APP=run_debug.py,DEBUG=1,DATABASE_NAME=flask_api
 

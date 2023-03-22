@@ -21,11 +21,11 @@ SEXES = {"M", "F", "NA"}
 
 class User(BaseModel):
     # __tablename__ = "user"
-    first_name = TextField(null=False)
-    last_name = TextField(null=False)
+    first_name = CharField(null=False)
+    last_name = CharField(null=False)
     birth_date = DateTimeField(null=False)
-    email = TextField(unique=True, null=False)
-    password = TextField(null=False)
+    email = CharField(unique=True, null=False)
+    password = CharField(null=False)
 
     profile_type = CharField(default="private")  # (protect, private, public)
     verified = BooleanField(default=False)
