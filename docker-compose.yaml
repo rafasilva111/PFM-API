@@ -25,6 +25,7 @@ services:
                 flask_network:
                         aliases:
                                 - flask-network
+        command: sudo apt-get install libpq-dev python-dev
         command: bash -c 'flask create_db && gunicorn --bind 0.0.0.0:8000 --workers 4 "run:create_run()"'
     nginx:
         image: nginx

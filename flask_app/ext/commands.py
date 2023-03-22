@@ -1,4 +1,4 @@
-from flask_app.ext.database import db
+from flask_app.ext.database import DBManager
 # from flask_app.models.model_user import User
 # from flask_app.models.model_recipe import Recipe
 # from flask_app.models.model_recipe_background import RecipeBackground
@@ -17,11 +17,11 @@ def init_app(app):
     ## import db model, otherwise it will not create table
     @app.cli.command("create_db")
     def create_db():
-        pass
+        DBManager().create_tables()
 
     @app.cli.command("drop_db")
     def drop_db():
-        db.drop_all()
+        DBManager().drop_tables()
 
 
     app.cli.add_command(create_db)

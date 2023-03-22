@@ -25,7 +25,7 @@ class DBManager:
     def __init__(self):
         db.connect()
 
-    def populate_db(self):
+    def create_tables(self):
         db.create_tables(models)
 
     def drop_tables(self):

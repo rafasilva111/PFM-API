@@ -4,28 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a21ecd84-c568-4707-ac73-2c533893fac0" name="Changes" comment="Stable build, works for prod and dev:&#10;for dev it must be run the run_debug.py and have these env variables PYTHONUNBUFFERED=1,FLASK_APP=run_debug.py,DEBUG=1,DATABASE_NAME=flask_api&#10;(only needed to be set on pycharm)">
-      <change afterPath="$PROJECT_DIR$/flask_app/models/model_metadata.py" afterDir="false" />
+    <list default="true" id="a21ecd84-c568-4707-ac73-2c533893fac0" name="Changes" comment="Real code starts here">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/blueprints/restapi/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_admin.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_recipe.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_recipe.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_student.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_student.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/util/constants.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/blueprints/restapi/util/constants.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/flask_app/ext/commands.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/ext/commands.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/flask_app/ext/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/ext/database.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/models/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/models/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/models/base_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/models/base_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/models/model_auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/models/model_auth.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/models/model_nutrition_information.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/models/model_nutrition_information.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/models/model_preparation.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/models/model_recipe.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/models/model_recipe.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/models/model_recipe_background.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/models/model_recipe_background.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/models/model_tag.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/models/model_tag.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app/models/model_user.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app/models/model_user.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/run.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/run_debug.py" beforeDir="false" afterPath="$PROJECT_DIR$/run_debug.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,6 +25,11 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="production" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="MarkdownSettingsMigration">
@@ -229,7 +219,21 @@
       <option name="project" value="LOCAL" />
       <updated>1679268889869</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Production comments shoudl be here">
+      <created>1679505691931</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1679505691931</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Real code starts here">
+      <created>1679505812750</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1679505812750</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -245,7 +249,9 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Stable build, works for prod and dev:&#10;for dev it must be run the run_debug.py and have these env variables PYTHONUNBUFFERED=1,FLASK_APP=run_debug.py,DEBUG=1,DATABASE_NAME=flask_api&#10;(only needed to be set on pycharm)" />
-    <option name="LAST_COMMIT_MESSAGE" value="Stable build, works for prod and dev:&#10;for dev it must be run the run_debug.py and have these env variables PYTHONUNBUFFERED=1,FLASK_APP=run_debug.py,DEBUG=1,DATABASE_NAME=flask_api&#10;(only needed to be set on pycharm)" />
+    <MESSAGE value="Production comments shoudl be here" />
+    <MESSAGE value="Real code starts here" />
+    <option name="LAST_COMMIT_MESSAGE" value="Real code starts here" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -264,11 +270,6 @@
           <url>file://$PROJECT_DIR$/flask_app/models/model_user.py</url>
           <line>83</line>
           <option name="timeStamp" value="35" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/flask_app/ext/commands.py</url>
-          <line>19</line>
-          <option name="timeStamp" value="56" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
