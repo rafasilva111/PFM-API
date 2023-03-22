@@ -3,14 +3,13 @@ import json
 from flask import Response, Blueprint
 from flask_restx import Namespace
 
-from flask_app.ext.database import db
-from flask_app.models import TokenBlocklist, NutritionInformation, Preparation, Recipe, RecipeBackground, Tag, User
+from flask_app.ext.database import DBManager
 admin_blueprint = Blueprint('admin_blueprint', __name__, url_prefix="/api/v1")
 
 # Admin API Model
 
 
-@admin_blueprint.route("/teste", methods=["GET"])
+@admin_blueprint.route("/create_tables", methods=["GET"])
 def teste():
-    db.create_tables([TokenBlocklist, NutritionInformation, Preparation, Recipe, RecipeBackground, Tag, User])
-    return Response(status=200, response=json.dumps("User logged out sucessfully."))
+    DBManager().populate_db()
+    return Response(status=200, response=json.dumps("Tables successfully created."))

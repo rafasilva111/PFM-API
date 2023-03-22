@@ -15,7 +15,10 @@ from flask_app.models.model_user import User
 class RecipeBackground(BaseModel):
     user = ForeignKeyField(User, backref="recipes")
     recipe = ForeignKeyField(Recipe, backref="backgrounds")
-    type = CharField()  # (liked, saved, created, commented)
+    type = CharField(null=False)  # (liked, saved, created, commented)
+
+    class Meta:
+        db_table = 'recipe_background'
 
 
 # Schema

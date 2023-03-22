@@ -6,7 +6,6 @@ from flask_app.ext import application
 from flask_app.ext import jwt
 from flask_app.ext import bycrypt
 from flask_app.blueprints import restapi
-from flask_app.ext.database import DBManager
 
 
 def create_run():
@@ -24,6 +23,4 @@ def create_run():
 app = create_run()
 
 if __name__ == "__main__":
-    conn = DBManager()
-    conn.populate_db()
     app.run(debug=True)

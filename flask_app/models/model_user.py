@@ -65,15 +65,18 @@ class UserSchema(ma.Schema):
     profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE)
     verified = fields.Boolean()
     user_type = fields.String(validate=lambda x: x in USER_TYPE)
-    img_source = fields.String()
+    img_source = fields.String(default="")
     activity_level = fields.Float(default=-1)
     height = fields.Float(default=-1)
     sex = fields.String(validate=lambda x: x in SEXES)
     weight = fields.Float(default=-1)
     age = fields.Integer(dump_only=True)
 
-    created_date = fields.DateTime(dump_only=True)
-    updated_date = fields.DateTime(dump_only=True)
+    created_date = fields.DateTime(dump_only=True,format='%Y-%m-%dT%H:%M:%S+00:00')
+    updated_date = fields.DateTime(dump_only=True,format='%Y-%m-%dT%H:%M:%S+00:00')
+
+    class Meta:
+        ordered = True
 
     email_regex = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 

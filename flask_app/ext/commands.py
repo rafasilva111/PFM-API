@@ -11,19 +11,22 @@ from flask_app.ext.database import db
 #
 # f = Faker()
 #
-from flask_app.models import TokenBlocklist, NutritionInformation, Preparation, Recipe, RecipeBackground, Tag, User
 
 
 def init_app(app):
-     ## import db model, otherwise it will not create table
-     @app.cli.command("create_db")
-     def create_db():
-         db.create_tables([TokenBlocklist, NutritionInformation, Preparation, Recipe, RecipeBackground, Tag, User])
-#
-#     @app.cli.command("drop_db")
-#     def drop_db():
-#         db.drop_all()
-#
+    ## import db model, otherwise it will not create table
+    @app.cli.command("create_db")
+    def create_db():
+        pass
+
+    @app.cli.command("drop_db")
+    def drop_db():
+        db.drop_all()
+
+
+    app.cli.add_command(create_db)
+    app.cli.add_command(drop_db)
+
 #     @app.cli.command("add_student")
 #     def add_student_to_db():
 #         data = [
@@ -52,7 +55,6 @@ def init_app(app):
 #         db.session.commit()
 #         return School.query.all()
 #
-#     app.cli.add_command(create_db)
-#     app.cli.add_command(drop_db)
+
 #     app.cli.add_command(add_student_to_db)
 #     app.cli.add_command(add_school_to_db)
