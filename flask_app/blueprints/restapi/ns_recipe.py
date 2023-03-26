@@ -249,35 +249,123 @@ class RecipeResource(Resource):
 
         return Response(status=201)
 
-    def delete(self, id):
-        """Delete a recipe by ID"""
-        try:
-            recipe = School.query.get(id)
-            if recipe is not None:
-                db.session.delete(recipe)
-                db.session.commit()
-                schema = SchoolSchema()
-                return {"message": "School was successfully added", "content": [schema.jsonify(school)]}
-            return school_no_exists(id)
-        except Exception as e:
-            return return_error_sql(e)
+    # def delete(self, id):
+        # """Delete a recipe by ID"""
+        # try:
+        #     recipe = School.query.get(id)
+        #     if recipe is not None:
+        #         db.session.delete(recipe)
+        #         db.session.commit()
+        #         schema = SchoolSchema()
+        #         return {"message": "School was successfully added", "content": [schema.jsonify(school)]}
+        #     return school_no_exists(id)
+        # except Exception as e:
+        #     return return_error_sql(e)
 
-    @api.expect(school_api_model)
-    def put(self, id):
-        """Put a school by ID"""
+
+
+    #create method to update recipe
+
+    @jwt_required()
+    def put(self):
+        """ Update a recipe by user """
+
+        # gets user auth id
+        user_id = get_jwt_identity()
         try:
-            if len(dict(**api.payload)) == len(school_api_model.keys()):
-                school = School.query.filter_by(id=id).update(dict(**api.payload))
-                if school:
-                    db.session.commit()
-                    return {"message": "Updated successfully"}
-                return school_no_exists(id)
-            else:
-                intersection = set(school_api_model.keys()).difference(set(api.payload.keys()))
-                return {
-                           "message": f"You are missing the following fields to be able to perform the PUT method: {intersection}"}, 400
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            return Response(status=400, response="Client couldn't be found by this id.")
+
+        # Get args
+        args = parser.parse_args()
+
+        # gets recipe id
+        recipe_id = args["id"]
+
+        # Validate args
+
+        if not recipe_id:
+            return Response(status=400, response="Invalid arguments...")
+
+        json_data = request.get_json()
+
+        try:
+            recipe_validated = RecipeSchema().load(json_data)
+        except ValidationError as err:
+            return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
+
+        try:
+            recipe = RecipeDB.get(id=recipe_id)
+        except peewee.DoesNotExist:
+            return Response(status=400, response="Recipe couln't be found by this id.")
+        try:
+            recipe.title = recipe_validated['title']
+            recipe.description = recipe_validated['description']
+            recipe.preparation = recipe_validated['preparation']
+            recipe.ingredients = recipe_validated['ingredients']
+            recipe.portion = recipe_validated['portion']
+
+            # Change get or create needed objects
+            # removing because the must be transformed before entity building
+            nutrition_table = recipe_validated.pop('nutrition_informations')
+            preparation = recipe_validated.pop('preparation')
+            ingredients = recipe_validated.pop('ingredients')
+            tags = recipe_validated.pop('tags')
+
+            # fills recipe object
+            recipe.preparation = str(preparation).encode()
+            recipe.ingredients = str(ingredients).encode()  # acho que é isto que torna o plob
+            # use .decode() to decode
+
+            # build relation to nutrition_table
+
+            try:
+                if nutrition_table and nutrition_table != {}:
+                    nutrition_information = NutritionInformationDB.get(recipe=recipe)
+                    nutrition_information.recipe = recipe
+                    recipe.nutrition_informations = nutrition_table
+
+            except Exception as e:
+                return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
+
+            # build relation to recipe_background
+
+            try:
+                recipe_background = RecipeBackgroundDB()
+                recipe_background.user = user
+                recipe_background.recipe = recipe
+                recipe_background.type = "SAVED"    #TODO no post estava a ser criado com CREATED, mas aqui não sei se é o caso
+
+            except Exception as e:
+                return Response(status=400, response="Tags Table has some error.\n" + str(e))
+
+            # build multi to multi relation to tags
+            try:
+                rows_deleted = TagDB.recipes.get_through_model().delete().where(TagDB.recipes.get_through_model().recipe_id == recipe.get_id()).execute()
+
+                if tags and tags != {} and rows_deleted:
+                    for t in tags:
+                        tag, created = TagDB.get_or_create(title=t)
+                        recipe.tags.add(tag)
+
+
+            except Exception as e:
+                return Response(status=400, response="Tags Table has some error.\n" + str(e))
+
+            # finally build full object
+            tag.save()
+            nutrition_information.save()
+            recipe_background.save()
+            recipe.save()
+            return Response(status=200, response="Recipe was successfully updated")
         except Exception as e:
-            return return_error_sql(e)
+            return Response(status=400, response="Recipe couldn't be updated.\n" + str(e))
+
 
     @api.expect(school_api_model)
     def patch(self, id):
