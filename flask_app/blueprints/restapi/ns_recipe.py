@@ -268,7 +268,7 @@ class RecipeResource(Resource):
 
     @jwt_required()
     def put(self):
-        """ Update a recipe by user """
+        """ Update a recipe by recipe id """
 
         # gets user auth id
         user_id = get_jwt_identity()
@@ -302,7 +302,8 @@ class RecipeResource(Resource):
         try:
             recipe = RecipeDB.get(id=recipe_id)
         except peewee.DoesNotExist:
-            return Response(status=400, response="Recipe couln't be found by this id.")
+            return Response(status=400, response="Recipe couldn't be found by this id.")
+
         try:
             recipe.title = recipe_validated['title']
             recipe.description = recipe_validated['description']
@@ -319,19 +320,8 @@ class RecipeResource(Resource):
 
             # fills recipe object
             recipe.preparation = str(preparation).encode()
-            recipe.ingredients = str(ingredients).encode()  # acho que é isto que torna o plob
+            recipe.ingredients = str(ingredients).encode()
             # use .decode() to decode
-
-            # build relation to nutrition_table
-
-            try:
-                if nutrition_table and nutrition_table != {}:
-                    nutrition_information = NutritionInformationDB.get(recipe=recipe)
-                    nutrition_information.recipe = recipe
-                    recipe.nutrition_informations = nutrition_table
-
-            except Exception as e:
-                return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
 
             # build relation to recipe_background
 
@@ -357,9 +347,15 @@ class RecipeResource(Resource):
             except Exception as e:
                 return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
+            try:
+                if nutrition_table and nutrition_table != {}:
+                    NutritionInformationDB.update(**nutrition_table).where(
+                        NutritionInformationDB.recipe == recipe).execute()
+            except Exception as e:
+                return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
+
             # finally build full object
             tag.save()
-            nutrition_information.save()
             recipe_background.save()
             recipe.save()
             return Response(status=200, response="Recipe was successfully updated")
