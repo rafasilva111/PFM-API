@@ -154,7 +154,15 @@ class RecipeResource(Resource):
 
         try:
             recipe_record = RecipeDB.get(id=args["id"])
+            recipe_record = model_to_dict(recipe_record, backrefs=True, recurse=True, manytomany=True)
+            ingredients = recipe_record.pop("ingredients")
+            preparation = recipe_record.pop("preparation")
+            ingredients.decode("utf-8")
+            preparation.decode("utf-8")
+            recipe_record["ingredients"] = ingredients
+            recipe_record["preparation"] = preparation
             schema = RecipeSchema().dump(recipe_record)
+            schema = json.dumps(schema)
         except peewee.DoesNotExist:
             return Response(status=400, response="Recipe does not exist...")
 
