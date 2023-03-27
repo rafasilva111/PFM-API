@@ -17,10 +17,9 @@ from ...models.model_user import User as UserDB
 from ...models.model_recipe_background import RecipeBackground as RecipeBackgroundDB
 from ...models.model_nutrition_information import NutritionInformation as NutritionInformationDB
 from .errors import return_error_sql, school_no_exists
-import logging
 
 
-logging.basicConfig(filename='warnings.log', encoding='utf-8', level=logging.DEBUG)
+
 # Create name space
 api = Namespace("Schools", description="Here are all School endpoints")
 
@@ -145,7 +144,7 @@ class RecipeListResource(Resource):
         except ValidationError as err:
             return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
 
-        logging.debug('1')
+
         # Change get or create needed objects
         # removing because the must be transformed before entity building
         nutrition_table = recipe_validated.pop('nutrition_informations')
@@ -153,7 +152,7 @@ class RecipeListResource(Resource):
         ingredients = recipe_validated.pop('ingredients')
         tags = recipe_validated.pop('tags')
 
-        logging.debug('2')
+
         # fills recipe object
         recipe = RecipeDB(**recipe_validated)
         recipe.preparation = str(preparation).encode()
@@ -162,7 +161,7 @@ class RecipeListResource(Resource):
         recipe.save()
 
         # build relation to nutrition_table
-        logging.debug('3')
+
         try:
             if 'id' in nutrition_table:
                 nutrition_table.pop('id')
@@ -175,7 +174,7 @@ class RecipeListResource(Resource):
             recipe.delete_instance(recursive=True)
             return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
 
-        logging.debug('4')
+
         # build multi to multi relation to tags
 
         try:
@@ -191,7 +190,7 @@ class RecipeListResource(Resource):
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
         # finally build full object
-        logging.debug('5')
+
         recipe.save()
 
         return Response(status=201)
