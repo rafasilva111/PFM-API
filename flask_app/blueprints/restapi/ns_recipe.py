@@ -192,8 +192,6 @@ class RecipeListResource(Resource):
 
         return Response(status=201)
 
-        Response(status=200, response="Not implemented yet.")
-
 
 @api.route("")
 class RecipeResource(Resource):

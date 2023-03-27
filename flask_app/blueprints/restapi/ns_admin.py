@@ -17,10 +17,3 @@ def teste():
 
     return Response(status=200, response=json.dumps("Tables successfully created."))
 
-@admin_blueprint.route("/delete_tables", methods=["GET"])
-def teste():
-    manager = DBManager()
-    manager.drop_tables()
-    manager.close()
-
-    return Response(status=200, response=json.dumps("Tables successfully created."))
