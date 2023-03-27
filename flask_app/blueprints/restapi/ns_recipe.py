@@ -244,18 +244,43 @@ class RecipeResource(Resource):
 
         return Response(status=201)
 
-    # def delete(self, id):
-        # """Delete a recipe by ID"""
-        # try:
-        #     recipe = School.query.get(id)
-        #     if recipe is not None:
-        #         db.session.delete(recipe)
-        #         db.session.commit()
-        #         schema = SchoolSchema()
-        #         return {"message": "School was successfully added", "content": [schema.jsonify(school)]}
-        #     return school_no_exists(id)
-        # except Exception as e:
-        #     return return_error_sql(e)
+    @jwt_required()
+    def delete(self):
+        """Delete a recipe by ID"""
+
+        # gets user auth id
+        user_id = get_jwt_identity()
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            return Response(status=400, response="Client couldn't be found by this id.")
+
+        # Get args
+        args = parser.parse_args()
+
+        # gets recipe id
+        recipe_id = args["id"]
+
+        # Validate args
+
+        if not recipe_id:
+            return Response(status=400, response="Invalid arguments...")
+
+        try:
+            recipe = RecipeDB.get(id=recipe_id)
+        except peewee.DoesNotExist:
+            return Response(status=400, response="Recipe does not exist...")
+
+        try:
+            recipe.delete_instance(recursive=True)
+        except Exception as e:
+            return Response(status=400, response="Recipe could not be deleted.\n" + str(e))
+
+        return Response(status=200, response="Recipe was successfully deleted.")
 
 
 
