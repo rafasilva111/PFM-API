@@ -16,10 +16,9 @@ from ...models.model_tag import Tag as TagDB, RecipeTagThrough as RecipeTagThrou
 from ...models.model_user import User as UserDB
 from ...models.model_recipe_background import RecipeBackground as RecipeBackgroundDB
 from ...models.model_nutrition_information import NutritionInformation as NutritionInformationDB
-from .errors import return_error_sql, school_no_exists
 
 # Create name space
-api = Namespace("Schools", description="Here are all School endpoints")
+api = Namespace("Recipes", description="Here are all Recipes endpoints")
 
 # Create params for pagination
 
@@ -31,35 +30,15 @@ parser.add_argument('string', type=str, help='The string to be search.')
 
 RECIPE_ENDPOINT = "/recipe"
 
-# School API Model
-school_api_full_model = api.model("School model", {
-    "id": fields.Integer(requred=False, description="The ID of school"),
-    "name": fields.String(required=True, description="The first name of school", min_length=3, max_length=20),
-    "address": fields.String(required=True, description="The last name of school", min_length=3, max_length=20),
-    "email": fields.String(required=True, description="The email of school", min_length=10, max_length=30),
-    "phone": fields.Integer(required=True, description="The age of school", min=1, max=100, allow_null=False),
-    "students": fields.List(
-        fields.String(required=True, description="Students attending this school", allow_null=False))
-})
-
-school_api_model = api.model("School model", {
-    "name": fields.String(required=True, description="The first name of school", min_length=3, max_length=20),
-    "address": fields.String(required=True, description="The last name of school", min_length=3, max_length=20),
-    "email": fields.String(required=True, description="The email of school", min_length=10, max_length=30),
-    "phone": fields.Integer(required=True, description="The age of school", min=1, max=100, allow_null=False),
-    "students": fields.List(
-        fields.String(required=True, description="Students attending this school", allow_null=False))
-})
-
 
 # Create resources
 @api.route("/list")
-@api.doc("get_recipe_list", model=school_api_full_model)
+@api.doc("get_recipe_list", model=RecipeDB)
 class RecipeListResource(Resource):
 
     @api.expect(parser)
     def get(self):
-        """List all schools"""
+        """List recipes by string search"""
         # Get args
 
         args = parser.parse_args()
@@ -75,7 +54,7 @@ class RecipeListResource(Resource):
         if page_size not in [5, 10, 20, 40]:
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
-        ## Pesquisa por String
+        # Pesquisa por String
 
         if string_to_search:
 
