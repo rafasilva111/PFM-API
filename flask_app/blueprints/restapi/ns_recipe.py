@@ -142,7 +142,7 @@ class RecipeListResource(Resource):
         except ValidationError as err:
             return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
 
-
+        print("here")
         # Change get or create needed objects
         # removing because the must be transformed before entity building
         nutrition_table = recipe_validated.pop('nutrition_informations')
@@ -150,6 +150,7 @@ class RecipeListResource(Resource):
         ingredients = recipe_validated.pop('ingredients')
         tags = recipe_validated.pop('tags')
 
+        print("here2")
         # fills recipe object
         recipe = RecipeDB(**recipe_validated)
         recipe.preparation = str(preparation).encode()
@@ -158,7 +159,7 @@ class RecipeListResource(Resource):
         recipe.save()
 
         # build relation to nutrition_table
-
+        print("here6")
         try:
             if 'id' in nutrition_table:
                 nutrition_table.pop('id')
@@ -171,7 +172,7 @@ class RecipeListResource(Resource):
             recipe.delete_instance(recursive=True)
             return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
 
-
+        print("here3")
         # build multi to multi relation to tags
 
         try:
@@ -187,7 +188,7 @@ class RecipeListResource(Resource):
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
         # finally build full object
-
+        print("here4")
         recipe.save()
 
         return Response(status=201)
