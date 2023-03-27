@@ -102,7 +102,15 @@ class RecipeListResource(Resource):
             recipes = []
             for item in query.paginate(page, page_size):
                 recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-                recipes.append(RecipeSchema().dump(recipe))
+                ingredients = recipe.pop("ingredients")
+                preparation = recipe.pop("preparation")
+                ingredients.decode("utf-8")
+                preparation.decode("utf-8")
+                recipe["ingredients"] = ingredients
+                recipe["preparation"] = preparation
+                schema = RecipeSchema().dump(recipe)
+                schema = schema
+                recipes.append(schema)
 
             response_holder["result"] = recipes
 
