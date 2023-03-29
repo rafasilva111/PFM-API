@@ -18,6 +18,8 @@ from ...models.model_recipe_background import RecipeBackground as RecipeBackgrou
 from ...models.model_nutrition_information import NutritionInformation as NutritionInformationDB
 from .errors import return_error_sql, school_no_exists
 
+
+
 # Create name space
 api = Namespace("Schools", description="Here are all School endpoints")
 
@@ -132,9 +134,66 @@ class RecipeListResource(Resource):
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
     def post(self):
-        # TODO bulk import method, will only be used by admin to populate company's recipe
+        json_data = request.get_json()
 
-        Response(status=200, response="Not implemented yet.")
+
+        # Validate args by loading it into schema
+
+        try:
+            recipe_validated = RecipeSchema().load(json_data)
+        except ValidationError as err:
+            return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
+
+
+        # Change get or create needed objects
+        # removing because the must be transformed before entity building
+        nutrition_table = recipe_validated.pop('nutrition_informations')
+        preparation = recipe_validated.pop('preparation')
+        ingredients = recipe_validated.pop('ingredients')
+        tags = recipe_validated.pop('tags')
+
+
+        # fills recipe object
+        recipe = RecipeDB(**recipe_validated)
+        recipe.preparation = str(preparation).encode()
+        recipe.ingredients = str(ingredients).encode()
+        # use .decode() to decode
+        recipe.save()
+
+        # build relation to nutrition_table
+
+        try:
+            if 'id' in nutrition_table:
+                nutrition_table.pop('id')
+
+            nutrition_information = NutritionInformationDB(**nutrition_table)
+            nutrition_information.recipe = recipe
+            nutrition_information.save()
+            recipe.nutrition_informations = nutrition_information
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
+
+
+        # build multi to multi relation to tags
+
+        try:
+            if tags and tags != {}:
+                for t in tags:
+                    tag, created = TagDB.get_or_create(title=t)
+                    tag.save()
+                    recipe.tags.add(tag)
+
+
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            return Response(status=400, response="Tags Table has some error.\n" + str(e))
+
+        # finally build full object
+
+        recipe.save()
+
+        return Response(status=201)
 
 
 @api.route("")

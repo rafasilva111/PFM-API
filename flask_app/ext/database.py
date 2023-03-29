@@ -28,11 +28,16 @@ class DBManager:
     def create_tables(self):
         db.create_tables(models)
 
+
     def drop_tables(self):
         db.drop_tables(models)
 
     def query_titles(self):
         return
+
+    # db should be disconnected after every query
+    def close(self):
+        db.close()
 
     # RECIPE
 
