@@ -31,7 +31,7 @@ parser.add_argument('page_size', type=int, help='The page size.')
 parser.add_argument('id', type=str, help='The string to be search.')
 parser.add_argument('string', type=str, help='The string to be search.')
 
-RECIPE_ENDPOINT = "/recipe"
+ENDPOINT = "/recipe"
 
 # School API Model
 school_api_full_model = api.model("School model", {
@@ -61,7 +61,7 @@ class RecipeListResource(Resource):
 
     @api.expect(parser)
     def get(self):
-        """List all schools"""
+        """List all recipes"""
         # Get args
 
         args = parser.parse_args()
@@ -96,7 +96,7 @@ class RecipeListResource(Resource):
 
             total_recipes = int(query.count())
             total_pages = math.ceil(total_recipes / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_recipes, RECIPE_ENDPOINT)
+            metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
             response_holder["_metadata"] = metadata
 
             # response data
@@ -119,7 +119,7 @@ class RecipeListResource(Resource):
 
             total_recipes = int(RecipeDB.select().count())
             total_pages = math.ceil(total_recipes / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_recipes, RECIPE_ENDPOINT)
+            metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
             response_holder["_metadata"] = metadata
 
             # response data
@@ -211,13 +211,16 @@ class RecipeResource(Resource):
         if not args["id"]:
             return Response(status=400, response="Invalid arguments...")
 
+        # Get and Serialize db model
+
         try:
             recipe_record = RecipeDB.get(id=args["id"])
-            schema = RecipeSchema().dump(recipe_record)
+            recipe_model = model_to_dict(recipe_record, backrefs=True, recurse=True, manytomany=True)
+            recipe_schema = RecipeSchema().dump(recipe_model)
         except peewee.DoesNotExist:
             return Response(status=400, response="Recipe does not exist...")
 
-        return Response(status=200, response=schema, mimetype="application/json")
+        return Response(status=200, response=json.dumps(recipe_schema), mimetype="application/json")
 
     @jwt_required()
     def post(self):

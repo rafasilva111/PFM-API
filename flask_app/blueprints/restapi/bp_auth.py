@@ -10,7 +10,7 @@ from playhouse.shortcuts import model_to_dict
 from flask_app.ext.database import db
 from ...models.model_auth import LoginSchema, TokenBlocklist
 from ...models.model_user import User as UserDB, UserSchema
-
+from datetime import date
 # Create blue print
 
 auth_blueprint = Blueprint('auth_blueprint', __name__, url_prefix="/api/v1/auth")
@@ -88,17 +88,21 @@ def register_user():
     except:
         pass
 
+
     # fills db objects
 
     try:
         new_user = UserDB(**data)
+        # calculate age
+        today = date.today()
+        new_user.age = today.year - data['birth_date'].year - ((today.month, today.day) < (data['birth_date'].month, data['birth_date'].day))
     except Exception as e:
         return Response(status=400, response=json.dumps(e), mimetype="application/json")
 
     # commit them
     new_user.save()
 
-    return Response(status=201, response="Object created.", mimetype="application/json")
+    return Response(status=201)
 
 
 

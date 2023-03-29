@@ -94,19 +94,26 @@ class RecipeSchema(ma.Schema):
             data['tags'] = [a['title'] for a in data['tags']]
         return data
 
-    # {
-    #     "name": "farinha de amêndoa Pingo Doce Biológico",
-    #     "value": "200 g"
-    # },
-    # {
-    #     "name": "farinha de amêndoa Pingo Doce Biológico",
-    #     "value": "200 g"
-    # },
-    # {
-    #     "name": "farinha de amêndoa Pingo Doce Biológico",
-    #     "value": "200 g"
-    # },
-    # {
-    #     "name": "farinha de amêndoa Pingo Doce Biológico",
-    #     "value": "200 g"
-    # }
+
+class RecipeSimpleSchema(ma.Schema):
+    id = fields.Integer(dump_only=True)
+    title = fields.String(required=True)
+    description = fields.String(required=True)
+    img_source = fields.String(required=False, default="")
+
+    difficulty = fields.String(required=False)
+    portion = fields.String(required=False)
+    time = fields.String(required=False)
+
+    likes = fields.Integer(default=0, required=False)
+    views = fields.Integer(default=0, required=False)
+
+    source_rating = fields.String(required=False)
+    source_link = fields.String(required=False)
+    company = fields.String(required=False)
+
+    created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
+    updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
+
+    class Meta:
+        ordered = True
