@@ -18,7 +18,8 @@ from ...models.model_recipe_background import RecipeBackground as RecipeBackgrou
 from ...models.model_nutrition_information import NutritionInformation as NutritionInformationDB
 from .errors import return_error_sql, school_no_exists
 
-
+RECIPES_BACKGROUND_TYPE_LIKED = "LIKED"
+RECIPES_BACKGROUND_TYPE_SAVED = "SAVED"
 
 # Create name space
 api = Namespace("Schools", description="Here are all School endpoints")
@@ -31,7 +32,7 @@ parser.add_argument('page_size', type=int, help='The page size.')
 parser.add_argument('id', type=str, help='The string to be search.')
 parser.add_argument('string', type=str, help='The string to be search.')
 
-RECIPE_ENDPOINT = "/recipe"
+ENDPOINT = "/recipe"
 
 # School API Model
 school_api_full_model = api.model("School model", {
@@ -61,7 +62,7 @@ class RecipeListResource(Resource):
 
     @api.expect(parser)
     def get(self):
-        """List all schools"""
+        """List all recipes"""
         # Get args
 
         args = parser.parse_args()
@@ -87,8 +88,6 @@ class RecipeListResource(Resource):
 
             # build query
 
-            # respons data
-
             query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
                 .where(TagDB.title.contains(string_to_search) | RecipeDB.title.contains(string_to_search))
 
@@ -96,7 +95,7 @@ class RecipeListResource(Resource):
 
             total_recipes = int(query.count())
             total_pages = math.ceil(total_recipes / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_recipes, RECIPE_ENDPOINT)
+            metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
             response_holder["_metadata"] = metadata
 
             # response data
@@ -119,7 +118,7 @@ class RecipeListResource(Resource):
 
             total_recipes = int(RecipeDB.select().count())
             total_pages = math.ceil(total_recipes / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_recipes, RECIPE_ENDPOINT)
+            metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
             response_holder["_metadata"] = metadata
 
             # response data
@@ -211,13 +210,16 @@ class RecipeResource(Resource):
         if not args["id"]:
             return Response(status=400, response="Invalid arguments...")
 
+        # Get and Serialize db model
+
         try:
             recipe_record = RecipeDB.get(id=args["id"])
-            schema = RecipeSchema().dump(recipe_record)
+            recipe_model = model_to_dict(recipe_record, backrefs=True, recurse=True, manytomany=True)
+            recipe_schema = RecipeSchema().dump(recipe_model)
         except peewee.DoesNotExist:
             return Response(status=400, response="Recipe does not exist...")
 
-        return Response(status=200, response=schema, mimetype="application/json")
+        return Response(status=200, response=json.dumps(recipe_schema), mimetype="application/json")
 
     @jwt_required()
     def post(self):
@@ -310,45 +312,113 @@ class RecipeResource(Resource):
 
     def delete(self, id):
         """Delete a recipe by ID"""
-        try:
-            recipe = School.query.get(id)
-            if recipe is not None:
-                db.session.delete(recipe)
-                db.session.commit()
-                schema = SchoolSchema()
-                return {"message": "School was successfully added", "content": [schema.jsonify(school)]}
-            return school_no_exists(id)
-        except Exception as e:
-            return return_error_sql(e)
+        return Response(status=200 , response="Not implemented yet.")
 
     @api.expect(school_api_model)
     def put(self, id):
         """Put a school by ID"""
-        try:
-            if len(dict(**api.payload)) == len(school_api_model.keys()):
-                school = School.query.filter_by(id=id).update(dict(**api.payload))
-                if school:
-                    db.session.commit()
-                    return {"message": "Updated successfully"}
-                return school_no_exists(id)
-            else:
-                intersection = set(school_api_model.keys()).difference(set(api.payload.keys()))
-                return {
-                           "message": f"You are missing the following fields to be able to perform the PUT method: {intersection}"}, 400
-        except Exception as e:
-            return return_error_sql(e)
+        return Response(status=200 , response="Not implemented yet.")
 
     @api.expect(school_api_model)
     def patch(self, id):
         """Patch a recipe by ID"""
+        return Response(status=200 , response="Not implemented yet.")
+
+
+@api.route("/like")
+class RecipeLikeResource(Resource):
+    @jwt_required()
+    def get(self):
+        """ Get a follow whit ID """
+        # todo esta rota ainda não sei se faz sentido, mas é para fazer na mesma
+
+        return Response(status=200 , response="Not implemented yet.")
+
+    @jwt_required()
+    def post(self):
+        """ Post a like by user on a recipe """
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # Get args
+
+        args = parser.parse_args()
+
+        recipe_to_be_liked_id = args['id']
+
+        # Validate args
+
+        if not args["id"]:
+            return Response(status=400, response="Missing arguments...")
+
+
+        # Verify existence of the requested ids model's
+
         try:
-            if api.payload:
-                recipe = School.query.filter_by(id=id).update(dict(**api.payload))
-                if recipe:
-                    db.session.commit()
-                    return {"message": "Updated successfully"}
-                return school_no_exists(id)
-            return {
-                       "message": f"You must have at least one of all of the following fields: {set(school_api_model.keys())}"}, 400
-        except Exception as e:
-            return return_error_sql(e)
+            recipe_to_be_liked = RecipeDB.get(recipe_to_be_liked_id)
+        except peewee.DoesNotExist:
+            return Response(status=400, response="Recipe to be liked, couln't be found.")
+
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and stil reach this far)
+            # this only occurs when accounts are not in db
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            return Response(status=400, response="User couln't be found.")
+
+        # fills comment object
+
+        recipe_background, created = RecipeBackgroundDB.get_or_create(user=user, recipe=recipe_to_be_liked, type= RECIPES_BACKGROUND_TYPE_LIKED)
+
+        if not created:
+            return Response(status=200, response="User already liked this recipe.")
+
+        recipe_background.save()
+
+        return Response(status=201)
+
+    @jwt_required()
+    def delete(self):
+        """Delete a comment by ID"""
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # Get args
+
+        args = parser.parse_args()
+
+        user_id = args['user_id'] if args['user_id'] else None
+        id = args['id'] if args['id'] else None
+
+        # Validate args
+
+        if not id and not user_id:
+            return Response(status=400, response="Missing arguments...")
+
+        # delete by referencing the user id
+        if user_id:
+            try:
+                follow = FollowDB.get(FollowDB.followed == user_id)
+            except peewee.DoesNotExist:
+                return Response(status=400, response="User does not follow referenced account.")
+
+            follow.delete_instance()
+
+        # delete by referencing the follow id
+        else:
+            try:
+                follow = FollowDB.get(FollowDB.followed == user_id)
+            except peewee.DoesNotExist:
+                return Response(status=400, response="User does not follow referenced account.")
+
+            follow.delete_instance()
+
+        return Response(status=200)

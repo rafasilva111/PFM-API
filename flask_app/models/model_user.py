@@ -41,11 +41,6 @@ class User(BaseModel):
     created_date = DateTimeField(default=datetime.now())
     updated_date = DateTimeField(default=datetime.now())
 
-    def hash_password(self, password):
-        return generate_password_hash(password).decode('utf8')
-
-    def check_password(self, password):
-        return check_password_hash(self.password, password)
 
 
 # Schemas

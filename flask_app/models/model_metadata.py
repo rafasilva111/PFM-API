@@ -4,10 +4,10 @@ from flask_app.ext.schema import ma
 
 _metadata_template = {
 
-    "current_page": 5,
-    "total_pages": 20,
-    "total_items": 521,
-    "items_per_page": 20,
+    "current_page": 0,
+    "total_pages": 0,
+    "total_items": 0,
+    "items_per_page": 0,
     "Links": [
     ]
 
@@ -16,7 +16,7 @@ _metadata_template = {
 
 def build_metadata(page, page_size, total_pages, total_units, ENDPOINT):
     _metadata = _metadata_template.copy()
-    if total_pages != 1:
+    if total_pages > 1:
         _metadata['Links'] = []
 
         if page < total_pages:

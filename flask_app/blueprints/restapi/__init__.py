@@ -10,9 +10,12 @@ from flask_restx import Api, Resource
 # from flask_app.models.model_school import School
 #from .ns_student import api as api_student
 #from .ns_school import api as api_school
-from .ns_recipe import api as api_recipe,RECIPE_ENDPOINT
+from .ns_recipe import api as api_recipe,ENDPOINT as RECIPE_ENDPOINT
+from .ns_user import api as api_user,ENDPOINT as USER_ENDPOINT
+from .ns_comment import api as api_comment,ENDPOINT as COMMENT_ENDPOINT
+from .ns_follow import api as api_follow,ENDPOINT as FOLLOW_ENDPOINT
 from .bp_auth import auth_blueprint
-from .ns_admin import admin_blueprint
+from .bp_admin import admin_blueprint
 
 # Here you create the API path
 
@@ -27,6 +30,9 @@ api = Api(bp, version="Version 1.0 ", title="API Documentation", description=des
 #api.add_namespace(api_student, path="/student")
 #api.add_namespace(api_school, path="/school")
 api.add_namespace(api_recipe, path=RECIPE_ENDPOINT)
+api.add_namespace(api_user, path=USER_ENDPOINT)
+api.add_namespace(api_comment, path=COMMENT_ENDPOINT)
+api.add_namespace(api_follow, path=FOLLOW_ENDPOINT)
 
 def init_app(app):
     app.register_blueprint(bp)
