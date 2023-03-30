@@ -62,7 +62,7 @@ def login_user():
     # create new
 
     expires = timedelta(days=7)
-    access_token = create_access_token(identity=str(user.id), expires_delta=expires)
+    access_token = create_access_token(identity=user.id, expires_delta=expires)
     response = {'token': access_token}
     return Response(status=200, response=json.dumps(response), mimetype="application/json")
 
