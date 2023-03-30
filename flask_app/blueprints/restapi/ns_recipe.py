@@ -25,11 +25,13 @@ api = Namespace("Recipes", description="Here are all Recipes endpoints")
 parser = api.parser()
 parser.add_argument('page', type=int, help='The page number.')
 parser.add_argument('page_size', type=int, help='The page size.')
-parser.add_argument('id', type=str, help='The string to be search.')
+parser.add_argument('id', type=int, help='The recipe id to be search.')
 parser.add_argument('string', type=str, help='The string to be search.')
+parser.add_argument('user_id', type=int, help='The user id to be search.')
 
 RECIPE_ENDPOINT = "/recipe"
 
+#TODO get recipes by user?
 
 # Create resources
 @api.route("/list")
@@ -44,6 +46,7 @@ class RecipeListResource(Resource):
         args = parser.parse_args()
 
         string_to_search = args['string']
+        string_to_search = args['user_id']
         page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
 
@@ -118,11 +121,6 @@ class RecipeListResource(Resource):
 
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
-    def post(self):
-        # TODO bulk import method, will only be used by admin to populate company's recipe
-
-        Response(status=200, response="Not implemented yet.")
-
 
 @api.route("")
 class RecipeResource(Resource):
@@ -142,12 +140,6 @@ class RecipeResource(Resource):
         try:
             recipe_record = RecipeDB.get(id=args["id"])
             recipe_record = model_to_dict(recipe_record, backrefs=True, recurse=True, manytomany=True)
-            ingredients = recipe_record.pop("ingredients")
-            preparation = recipe_record.pop("preparation")
-            ingredients.decode("utf-8")
-            preparation.decode("utf-8")
-            recipe_record["ingredients"] = ingredients
-            recipe_record["preparation"] = preparation
             schema = RecipeSchema().dump(recipe_record)
             schema = json.dumps(schema)
         except peewee.DoesNotExist:
@@ -284,22 +276,11 @@ class RecipeResource(Resource):
 
 
 
-    #create method to update recipe
+    #method to update recipe
 
     @jwt_required()
     def put(self):
         """ Update a recipe by recipe id """
-
-        # gets user auth id
-        user_id = get_jwt_identity()
-        try:
-            user = UserDB.get(user_id)
-        except peewee.DoesNotExist:
-            jti = get_jwt()["jti"]
-            now = datetime.now(timezone.utc)
-            token_block_record = TokenBlocklist(jti=jti, created_at=now)
-            token_block_record.save()
-            return Response(status=400, response="Client couldn't be found by this id.")
 
         # Get args
         args = parser.parse_args()
@@ -324,6 +305,17 @@ class RecipeResource(Resource):
         except peewee.DoesNotExist:
             return Response(status=400, response="Recipe couldn't be found by this id.")
 
+        # gets user auth id
+        user_id = get_jwt_identity()
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            return Response(status=400, response="Client couldn't be found by this id.")
+
         try:
             recipe.title = recipe_validated['title']
             recipe.description = recipe_validated['description']
@@ -343,16 +335,6 @@ class RecipeResource(Resource):
             recipe.ingredients = str(ingredients).encode()
             # use .decode() to decode
 
-            # build relation to recipe_background
-
-            try:
-                recipe_background = RecipeBackgroundDB()
-                recipe_background.user = user
-                recipe_background.recipe = recipe
-                recipe_background.type = "SAVED"    #TODO no post estava a ser criado com CREATED, mas aqui não sei se é o caso
-
-            except Exception as e:
-                return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
             # build multi to multi relation to tags
             try:
@@ -369,31 +351,18 @@ class RecipeResource(Resource):
 
             try:
                 if nutrition_table and nutrition_table != {}:
-                    NutritionInformationDB.update(**nutrition_table).where(
-                        NutritionInformationDB.recipe == recipe).execute()
+                   NutritionInformationDB.update(**nutrition_table).where(
+                        NutritionInformationDB.recipe == recipe)
             except Exception as e:
                 return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
 
             # finally build full object
             tag.save()
             recipe_background.save()
+
             recipe.save()
             return Response(status=200, response="Recipe was successfully updated")
         except Exception as e:
             return Response(status=400, response="Recipe couldn't be updated.\n" + str(e))
 
 
-    @api.expect(school_api_model)
-    def patch(self, id):
-        """Patch a recipe by ID"""
-        try:
-            if api.payload:
-                recipe = School.query.filter_by(id=id).update(dict(**api.payload))
-                if recipe:
-                    db.session.commit()
-                    return {"message": "Updated successfully"}
-                return school_no_exists(id)
-            return {
-                       "message": f"You must have at least one of all of the following fields: {set(school_api_model.keys())}"}, 400
-        except Exception as e:
-            return return_error_sql(e)
