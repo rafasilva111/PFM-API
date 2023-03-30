@@ -8,6 +8,8 @@ from flask_app.models.model_recipe import Recipe
 from flask_app.models.model_recipe_background import RecipeBackground
 from flask_app.models.model_nutrition_information import NutritionInformation
 from flask_app.models.model_tag import Tag, RecipeTagThrough
+from flask_app.models.model_comment import Comment
+from flask_app.models.model_follow import Follow
 
 user = os.environ.get('MYSQL_ROOT') if os.environ.get('MYSQL_ROOT') else "root"
 password = os.environ.get('MYSQL_ROOT_PASSWORD') if os.environ.get('MYSQL_ROOT_PASSWORD') else ""
@@ -17,7 +19,7 @@ host = os.environ.get('MYSQL_HOST') if os.environ.get('MYSQL_HOST') else "localh
 db = MySQLDatabase(database=database, user=user, password=password,
                    host=host)
 
-models = [TokenBlocklist, NutritionInformation, Recipe, RecipeBackground, Tag, User, RecipeTagThrough]
+models = [TokenBlocklist, NutritionInformation, Recipe, RecipeBackground, Tag, User, RecipeTagThrough, Comment,Follow]
 
 
 class DBManager:
@@ -28,11 +30,16 @@ class DBManager:
     def create_tables(self):
         db.create_tables(models)
 
+
     def drop_tables(self):
         db.drop_tables(models)
 
     def query_titles(self):
         return
+
+    # db should be disconnected after every query
+    def close(self):
+        db.close()
 
     # RECIPE
 

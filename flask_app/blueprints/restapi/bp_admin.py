@@ -11,5 +11,9 @@ admin_blueprint = Blueprint('admin_blueprint', __name__, url_prefix="/api/v1")
 
 @admin_blueprint.route("/create_tables", methods=["GET"])
 def teste():
-    DBManager().create_tables()
+    manager = DBManager()
+    manager.create_tables()
+    manager.close()
+
     return Response(status=200, response=json.dumps("Tables successfully created."))
+
