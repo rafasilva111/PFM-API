@@ -1,6 +1,6 @@
 import json
 import math
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import peewee
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
@@ -26,8 +26,9 @@ api = Namespace("Comments", description="Here are all comment endpoints")
 parser = api.parser()
 parser.add_argument('page', type=int, help='The page number.')
 parser.add_argument('page_size', type=int, help='The page size.')
-parser.add_argument('id', type=int, help='The string to be search.')
-parser.add_argument('recipe_id', type=int, help='The string to be search.')
+parser.add_argument('id', type=int, help='The id to be search.')
+parser.add_argument('recipe_id', type=int, help='The recipe id to be search.')
+parser.add_argument('user_id', type=int, help='The user id to be search.')
 
 ENDPOINT = "/comment"
 
@@ -107,7 +108,6 @@ class CommentsListResource(Resource):
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 @api.route("")
-@api.doc("Student partial")
 class CommentResource(Resource):
 
     @jwt_required()
@@ -174,13 +174,13 @@ class CommentResource(Resource):
             now = datetime.now(timezone.utc)
             token_block_record = TokenBlocklist(jti=jti, created_at=now)
             token_block_record.save()
-            return Response(status=400, response="Client couln't be found.")
+            return Response(status=400, response="Client couldn't be found.")
 
         try:
             recipe = RecipeDB.get(recipe_id)
         except peewee.DoesNotExist:
             # this only occurs when accounts are not in db
-            return Response(status=400, response="Recipe couln't be found.")
+            return Response(status=400, response="Recipe couldn't be found.")
 
         # fills comment object
 
@@ -192,14 +192,110 @@ class CommentResource(Resource):
         return Response(status=201)
 
     @jwt_required()
-    def put(self):
-        """Put a comment by ID"""
+    def patch(self):
+        """Patch a comment by ID"""
 
-        return Response(status=202)
+        # Parse json body
+
+        json_data = request.get_json()
+
+        # Get args
+
+        args = parser.parse_args()
+
+        id = args['id']
+        user_id = args['user_id']
+
+        # Validate args
+
+        if not args["id"]:
+            return Response(status=400, response="Missing id argument...")
+
+        # if not args["user_id"]:
+        #     return Response(status=400, response="Missing user_id argument...")
+
+        # Validate args by loading it into schema
+
+        try:
+            comment_validated = CommentSchema().load(json_data)
+        except ValidationError as err:
+            return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
+
+        # Verify existence of the requested ids model's
+
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and stil reach this far)
+            # this only occurs when accounts are not in db
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            return Response(status=400, response="Client couldn't be found.")
+
+        try:
+            comment = CommentDB.get(id=id)
+        except peewee.DoesNotExist:
+            # this only occurs when accounts are not in db
+            return Response(status=400, response="Comment couldn't be found.")
+
+        # fills comment object
+
+        try:
+            # check if comment was created in less than 12 hours
+            if comment.created_date > datetime.now() - timedelta(hours=12):
+                comment.text = comment_validated["text"]
+                comment.updated_date = datetime.now()
+                comment.save()
+                return Response(status=202)
+            else:
+                return Response(status=400, response="Comment can't be updated after 12 hours.")
+        except peewee.DoesNotExist:
+            return Response(status=400, response="Comment couldn't be updated.")
 
     @jwt_required()
     def delete(self):
         """Delete a comment by ID"""
 
-        return Response(status=202)
+        # gets user auth id
+        user_auth_id = get_jwt_identity()
+        try:
+            user = UserDB.get(user_auth_id)
+        except peewee.DoesNotExist:
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            return Response(status=400, response="No user found by this id.")
+
+        # Get args
+        args = parser.parse_args()
+
+        id = args['id']
+        user_id = args['user_id']
+
+        # Validate args
+        if not args["id"]:
+            return Response(status=400, response="Missing id argument...")
+
+        if not args["user_id"]:
+            return Response(status=400, response="Missing user_id argument...")
+
+        # get comment by id
+        try:
+            comment = CommentDB.get(id=id, user_id=user_id)
+        except peewee.DoesNotExist:
+            return Response(status=400, response="No comment found by this id.")
+
+        # checks if user is admin or the one who created the comment and deletes the comment
+
+        if user.user_type == "A" or user.id == comment.user.id:
+            try:
+                comment.delete_instance()
+                return Response(status=200, response="Comment deleted successfully.")
+            except peewee.DoesNotExist:
+                return Response(status=400, response="No comment found by this id.")
+        else:
+            return Response(status=400, response="You are not authorized to delete this comment.")
 
