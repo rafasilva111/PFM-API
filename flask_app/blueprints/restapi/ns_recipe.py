@@ -14,12 +14,13 @@ from ...models.model_metadata import MetadataSchema, build_metadata
 from ...models.model_recipe import Recipe as RecipeDB, RecipeSchema
 from ...models.model_tag import Tag as TagDB, RecipeTagThrough as RecipeTagThroughDB
 from ...models.model_user import User as UserDB
-from ...models.model_recipe_background import RecipeBackground as RecipeBackgroundDB
+from ...models.model_recipe_background import RecipeBackground as RecipeBackgroundDB, RecipeBackground
 from ...models.model_nutrition_information import NutritionInformation as NutritionInformationDB
 from .errors import return_error_sql, school_no_exists
 
 RECIPES_BACKGROUND_TYPE_LIKED = "LIKED"
 RECIPES_BACKGROUND_TYPE_SAVED = "SAVED"
+RECIPES_BACKGROUND_TYPE_CREATED = "CREATED"
 
 # Create name space
 api = Namespace("Recipes", description="Here are all Recipes endpoints")
@@ -35,7 +36,8 @@ parser.add_argument('user_id', type=int, help='The user id to be search.')
 
 ENDPOINT = "/recipe"
 
-#TODO get recipes by user?
+
+# TODO get recipes by user?
 
 # Create resources
 @api.route("/list")
@@ -50,7 +52,7 @@ class RecipeListResource(Resource):
         args = parser.parse_args()
 
         string_to_search = args['string']
-        user_id = args['user_id'] # falta procura por user_id
+        user_id = args['user_id']  # falta procura por user_id
         page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
 
@@ -109,7 +111,7 @@ class RecipeListResource(Resource):
             recipes = []
             for item in RecipeDB.select().paginate(page, page_size):
                 recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-                teste  = RecipeSchema().dump(recipe)
+                teste = RecipeSchema().dump(recipe)
 
                 recipes.append(teste)
 
@@ -120,7 +122,6 @@ class RecipeListResource(Resource):
     def post(self):
         json_data = request.get_json()
 
-
         # Validate args by loading it into schema
 
         try:
@@ -128,14 +129,12 @@ class RecipeListResource(Resource):
         except ValidationError as err:
             return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
 
-
         # Change get or create needed objects
         # removing because the must be transformed before entity building
         nutrition_table = recipe_validated.pop('nutrition_informations')
         preparation = recipe_validated.pop('preparation')
         ingredients = recipe_validated.pop('ingredients')
         tags = recipe_validated.pop('tags')
-
 
         # fills recipe object
         recipe = RecipeDB(**recipe_validated)
@@ -157,7 +156,6 @@ class RecipeListResource(Resource):
         except Exception as e:
             recipe.delete_instance(recursive=True)
             return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
-
 
         # build multi to multi relation to tags
 
@@ -230,6 +228,7 @@ class RecipeResource(Resource):
         except peewee.DoesNotExist:
 
             # Otherwise block user token (user cant be logged in and stil reach this far)
+            # should not reach prod (seria muito mau sinal se for preciso)
             jti = get_jwt()["jti"]
             now = datetime.now(timezone.utc)
             token_block_record = TokenBlocklist(jti=jti, created_at=now)
@@ -320,7 +319,7 @@ class RecipeResource(Resource):
 
         if not recipe_id:
             return Response(status=400, response="Invalid arguments...")
-
+        # todo validar se a recipe pertence ao user (middle)
         try:
             recipe = RecipeDB.get(id=recipe_id)
         except peewee.DoesNotExist:
@@ -333,9 +332,7 @@ class RecipeResource(Resource):
 
         return Response(status=200, response="Recipe was successfully deleted.")
 
-
-
-    #method to update recipe
+    # method to update recipe
 
     @jwt_required()
     def put(self):
@@ -394,10 +391,10 @@ class RecipeResource(Resource):
             recipe.ingredients = str(ingredients).encode()
             # use .decode() to decode
 
-
             # build multi to multi relation to tags
             try:
-                rows_deleted = TagDB.recipes.get_through_model().delete().where(TagDB.recipes.get_through_model().recipe_id == recipe.get_id()).execute()
+                rows_deleted = TagDB.recipes.get_through_model().delete().where(
+                    TagDB.recipes.get_through_model().recipe_id == recipe.get_id()).execute()
 
                 if tags and tags != {} and rows_deleted:
                     for t in tags:
@@ -410,7 +407,7 @@ class RecipeResource(Resource):
 
             try:
                 if nutrition_table and nutrition_table != {}:
-                   NutritionInformationDB.update(**nutrition_table).where(
+                    NutritionInformationDB.update(**nutrition_table).where(
                         NutritionInformationDB.recipe == recipe)
             except Exception as e:
                 return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
@@ -429,10 +426,10 @@ class RecipeResource(Resource):
 class RecipeLikeResource(Resource):
     @jwt_required()
     def get(self):
-        """ Get a follow whit ID """
+        """ Get a like whit ID """
         # todo esta rota ainda não sei se faz sentido, mas é para fazer na mesma
 
-        return Response(status=200 , response="Not implemented yet.")
+        return Response(status=200, response="Not implemented yet.")
 
     @jwt_required()
     def post(self):
@@ -452,7 +449,6 @@ class RecipeLikeResource(Resource):
 
         if not args["id"]:
             return Response(status=400, response="Missing arguments...")
-
 
         # Verify existence of the requested ids model's
 
@@ -474,7 +470,8 @@ class RecipeLikeResource(Resource):
 
         # fills comment object
 
-        recipe_background, created = RecipeBackgroundDB.get_or_create(user=user, recipe=recipe_to_be_liked, type= RECIPES_BACKGROUND_TYPE_LIKED)
+        recipe_background, created = RecipeBackgroundDB.get_or_create(user=user, recipe=recipe_to_be_liked,
+                                                                      type=RECIPES_BACKGROUND_TYPE_LIKED)
 
         if not created:
             return Response(status=200, response="User already liked this recipe.")
@@ -486,3 +483,312 @@ class RecipeLikeResource(Resource):
     @jwt_required()
     def delete(self):
         """Delete like"""
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # Get args
+
+        args = parser.parse_args()
+
+        like_to_be_deleted_id = args['id']
+
+        # Validate args
+
+        if not args["id"]:
+            return Response(status=400, response="Missing arguments...")
+
+        # query
+
+        RecipeBackgroundDB.delete() \
+            .where(
+            RecipeBackgroundDB == like_to_be_deleted_id & RecipeBackgroundDB.user == user_id & RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_LIKED) \
+            .execute()
+
+        return Response(status=204)
+
+
+@api.route("/likes")
+class RecipeLikesResource(Resource):
+    @jwt_required()
+    @api.expect(parser)
+    def get(self):
+        """List creates by user"""
+        # Get args
+
+        args = parser.parse_args()
+
+        page = int(args['page']) if args['page'] else 1
+        page_size = int(args['page_size']) if args['page_size'] else 5
+
+        # validate args
+
+        if page <= 0:
+            return Response(status=400, response="page cant be negative")
+        if page_size not in [5, 10, 20, 40]:
+            return Response(status=400, response="page_size not in [5, 10, 20, 40]")
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # declare response holder
+
+        response_holder = {}
+
+        # query
+        RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB)
+
+        query = RecipeDB.select(RecipeDB).distinct().join(RecipeBackgroundDB).join(UserDB) \
+            .where(UserDB.id == user_id, RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_LIKED)
+
+        # metadata
+
+        total_recipes = int(query.count())
+        total_pages = math.ceil(total_recipes / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
+        response_holder["_metadata"] = metadata
+
+        # response data
+
+        recipes = []
+        for item in query.paginate(page, page_size):
+            recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
+            recipes.append(RecipeSchema().dump(recipe))
+
+        response_holder["result"] = recipes
+
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+
+    @jwt_required()
+    def post(self):
+        """ Post multiple likes by user on a recipe """
+        # todo não sei se faz sentido mas pode ser importante para importar recipes a partir da metada (low)
+
+        return Response(status=200, response="Not implemented yet.")
+
+    @jwt_required()
+    def delete(self):
+        """Delete multiple likes by user on a recipe"""
+        # todo não sei se faz sentido mas pode ser importante para remover recipes a partir da metada (low)
+
+        return Response(status=200, response="Not implemented yet.")
+
+
+@api.route("/save")
+class RecipeSaveResource(Resource):
+    @jwt_required()
+    def get(self):
+        """ Get a save whit ID """
+        # todo esta rota ainda não sei se faz sentido, mas é para fazer na mesma (low)
+
+        return Response(status=200, response="Not implemented yet.")
+
+    @jwt_required()
+    def post(self):
+        """ Post a save by user on a recipe """
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # Get args
+
+        args = parser.parse_args()
+
+        recipe_to_be_saved_id = args['id']
+
+        # Validate args
+
+        if not args["id"]:
+            return Response(status=400, response="Missing arguments...")
+
+        # Verify existence of the requested ids model's
+
+        try:
+            recipe_to_be_liked = RecipeDB.get(recipe_to_be_saved_id)
+        except peewee.DoesNotExist:
+            return Response(status=400, response="Recipe to be liked, couln't be found.")
+
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and stil reach this far)
+            # this only occurs when accounts are not in db
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            return Response(status=400, response="User couln't be found.")
+
+        # fills comment object
+
+        recipe_background, created = RecipeBackgroundDB.get_or_create(user=user, recipe=recipe_to_be_liked,
+                                                                      type=RECIPES_BACKGROUND_TYPE_SAVED)
+
+        if not created:
+            return Response(status=200, response="User already saved this recipe.")
+
+        recipe_background.save()
+
+        return Response(status=201)
+
+    @jwt_required()
+    def delete(self):
+        """Delete save"""
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # Get args
+
+        args = parser.parse_args()
+
+        like_to_be_deleted_id = args['id']
+
+        # Validate args
+
+        if not args["id"]:
+            return Response(status=400, response="Missing arguments...")
+
+        # query
+
+        RecipeBackgroundDB.delete() \
+            .where(
+            RecipeBackgroundDB == like_to_be_deleted_id & RecipeBackgroundDB.user == user_id & RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_SAVED) \
+            .execute()
+
+        return Response(status=204)
+
+
+@api.route("/saves")
+class RecipeSavesResource(Resource):
+    @jwt_required()
+    @api.expect(parser)
+    def get(self):
+        """List creates by user"""
+        # Get args
+
+        args = parser.parse_args()
+
+        page = int(args['page']) if args['page'] else 1
+        page_size = int(args['page_size']) if args['page_size'] else 5
+
+        # validate args
+
+        if page <= 0:
+            return Response(status=400, response="page cant be negative")
+        if page_size not in [5, 10, 20, 40]:
+            return Response(status=400, response="page_size not in [5, 10, 20, 40]")
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # declare response holder
+
+        response_holder = {}
+
+        # query
+        RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB)
+
+        query = RecipeDB.select(RecipeDB).distinct().join(RecipeBackgroundDB).join(UserDB) \
+            .where(UserDB.id == user_id, RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_SAVED)
+
+        # metadata
+
+        total_recipes = int(query.count())
+        total_pages = math.ceil(total_recipes / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
+        response_holder["_metadata"] = metadata
+
+        # response data
+
+        recipes = []
+        for item in query.paginate(page, page_size):
+            recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
+            recipes.append(RecipeSchema().dump(recipe))
+
+        response_holder["result"] = recipes
+
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+
+    @jwt_required()
+    def post(self):
+        """ Post multiple saves by user on a recipe """
+        # todo não sei se faz sentido mas pode ser importante para importar recipes a partir da metada (low)
+
+        return Response(status=200, response="Not implemented yet.")
+
+    @jwt_required()
+    def delete(self):
+        """Delete multiple saves by user on a recipe"""
+        # todo não sei se faz sentido mas pode ser importante para remover recipes a partir da metada (low)
+
+        return Response(status=200, response="Not implemented yet.")
+
+
+@api.route("/create")
+class RecipeCreateResource(Resource):
+    @jwt_required()
+    @api.expect(parser)
+    def get(self):
+        """Get recipe created by user on id"""
+        # todo (median)
+
+        return Response(status=200, response="Not implemented yet.")
+
+
+@api.route("/creates")
+class RecipeCreatesResource(Resource):
+    @jwt_required()
+    @api.expect(parser)
+    def get(self):
+        """List creates by user"""
+        # Get args
+
+        args = parser.parse_args()
+
+        page = int(args['page']) if args['page'] else 1
+        page_size = int(args['page_size']) if args['page_size'] else 5
+
+        # validate args
+
+        if page <= 0:
+            return Response(status=400, response="page cant be negative")
+        if page_size not in [5, 10, 20, 40]:
+            return Response(status=400, response="page_size not in [5, 10, 20, 40]")
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # declare response holder
+
+        response_holder = {}
+
+        # query
+        RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB)
+
+        query = RecipeDB.select(RecipeDB).distinct().join(RecipeBackgroundDB).join(UserDB) \
+            .where(UserDB.id == user_id, RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_CREATED)
+
+        # metadata
+
+        total_recipes = int(query.count())
+        total_pages = math.ceil(total_recipes / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
+        response_holder["_metadata"] = metadata
+
+        # response data
+
+        recipes = []
+        for item in query.paginate(page, page_size):
+            recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
+            recipes.append(RecipeSchema().dump(recipe))
+
+        response_holder["result"] = recipes
+
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
