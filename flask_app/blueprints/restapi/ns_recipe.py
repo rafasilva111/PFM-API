@@ -50,7 +50,7 @@ class RecipeListResource(Resource):
         args = parser.parse_args()
 
         string_to_search = args['string']
-        string_to_search = args['user_id']
+        user_id = args['user_id'] # falta procura por user_id
         page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
 
@@ -109,7 +109,9 @@ class RecipeListResource(Resource):
             recipes = []
             for item in RecipeDB.select().paginate(page, page_size):
                 recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-                recipes.append(RecipeSchema().dump(recipe))
+                teste  = RecipeSchema().dump(recipe)
+
+                recipes.append(teste)
 
             response_holder["result"] = recipes
 

@@ -106,7 +106,7 @@ def register_user():
 
 
 
-@auth_blueprint.route('/', methods=['GET'])
+@auth_blueprint.route('', methods=['GET'])
 @jwt_required()
 def get_user_session():
     # gets user auth id
