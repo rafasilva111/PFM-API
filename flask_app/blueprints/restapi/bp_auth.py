@@ -11,6 +11,7 @@ from flask_app.ext.database import db
 from ...models.model_auth import LoginSchema, TokenBlocklist
 from ...models.model_user import User as UserDB, UserSchema
 from datetime import date
+
 # Create blue print
 
 auth_blueprint = Blueprint('auth_blueprint', __name__, url_prefix="/api/v1/auth")
@@ -67,7 +68,7 @@ def login_user():
     return Response(status=200, response=json.dumps(response), mimetype="application/json")
 
 
-@auth_blueprint.route('/register', methods=['POST'])
+@auth_blueprint.route('', methods=['POST'])
 def register_user():
     # Get json data
 
@@ -88,14 +89,14 @@ def register_user():
     except:
         pass
 
-
     # fills db objects
 
     try:
         new_user = UserDB(**data)
         # calculate age
         today = date.today()
-        new_user.age = today.year - data['birth_date'].year - ((today.month, today.day) < (data['birth_date'].month, data['birth_date'].day))
+        new_user.age = today.year - data['birth_date'].year - (
+                    (today.month, today.day) < (data['birth_date'].month, data['birth_date'].day))
     except Exception as e:
         return Response(status=400, response=json.dumps(e), mimetype="application/json")
 
@@ -105,7 +106,6 @@ def register_user():
     return Response(status=201)
 
 
-
 @auth_blueprint.route('', methods=['GET'])
 @jwt_required()
 def get_user_session():
@@ -113,16 +113,13 @@ def get_user_session():
 
     user_id = get_jwt_identity()
 
+    # query
     user_record = UserDB.get(user_id)
 
-    userResponse = model_to_dict(user_record)
+    userResponse = model_to_dict(user_record, backrefs=True, recurse=True, manytomany=True)
+    userSchema = UserSchema().dump(userResponse)
 
-    userResponse['created_date'] = userResponse['created_date'].strftime("%d/%m/%Y, %H:%M:%S")
-    userResponse['updated_date'] = userResponse['updated_date'].strftime("%d/%m/%Y, %H:%M:%S")
-    userResponse['birth_date'] = userResponse['birth_date'].strftime("%d/%m/%Y")
-
-    return Response(status=200, response=json.dumps(userResponse), mimetype="application/json")
-
+    return Response(status=200, response=json.dumps(userSchema), mimetype="application/json")
 
 
 @auth_blueprint.route("/logout", methods=["DELETE"])

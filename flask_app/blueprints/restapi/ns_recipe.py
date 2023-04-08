@@ -11,16 +11,15 @@ from playhouse.shortcuts import model_to_dict
 
 from ...models import TokenBlocklist
 from ...models.model_metadata import MetadataSchema, build_metadata
-from ...models.model_recipe import Recipe as RecipeDB, RecipeSchema
+from ...models.model_recipe import Recipe as RecipeDB, RecipeSchema, RECIPES_BACKGROUND_TYPE_CREATED, \
+    RECIPES_BACKGROUND_TYPE_LIKED, RECIPES_BACKGROUND_TYPE_SAVED
 from ...models.model_tag import Tag as TagDB, RecipeTagThrough as RecipeTagThroughDB
 from ...models.model_user import User as UserDB
 from ...models.model_recipe_background import RecipeBackground as RecipeBackgroundDB, RecipeBackground
 from ...models.model_nutrition_information import NutritionInformation as NutritionInformationDB
 from .errors import return_error_sql, school_no_exists
 
-RECIPES_BACKGROUND_TYPE_LIKED = "LIKED"
-RECIPES_BACKGROUND_TYPE_SAVED = "SAVED"
-RECIPES_BACKGROUND_TYPE_CREATED = "CREATED"
+
 
 # Create name space
 api = Namespace("Recipes", description="Here are all Recipes endpoints")
@@ -421,6 +420,10 @@ class RecipeResource(Resource):
         except Exception as e:
             return Response(status=400, response="Recipe couldn't be updated.\n" + str(e))
 
+
+"""
+    Functionality
+"""
 
 @api.route("/like")
 class RecipeLikeResource(Resource):

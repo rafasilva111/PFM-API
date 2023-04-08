@@ -11,6 +11,8 @@ from flask_app.ext.schema import ma
 from flask_app.models.base_model import BaseModel
 
 # Enum
+from flask_app.models.model_recipe import RecipeSchema, RECIPES_BACKGROUND_TYPE_LIKED, RECIPES_BACKGROUND_TYPE_SAVED, \
+    RECIPES_BACKGROUND_TYPE_CREATED
 
 PROFILE_TYPE = {"NORMAL", "VIP", "ADMIN"}
 USER_TYPE = {"PUBLIC", "PRIVATE"}
@@ -47,6 +49,7 @@ class User(BaseModel):
     def check_password(self, password):
         return check_password_hash(self.password, password)
 
+
 # Schemas
 
 def get_user_schema():
@@ -71,8 +74,14 @@ class UserSchema(ma.Schema):
     weight = fields.Float(default=-1)
     age = fields.Integer(dump_only=True)
 
-    created_date = fields.DateTime(dump_only=True,format='%Y-%m-%dT%H:%M:%S+00:00')
-    updated_date = fields.DateTime(dump_only=True,format='%Y-%m-%dT%H:%M:%S+00:00')
+    liked_recipes = fields.Nested(RecipeSchema, many=True,dump_only=True)
+    saved_recipes = fields.Nested(RecipeSchema, many=True,dump_only=True)
+    created_recipes = fields.Nested(RecipeSchema, many=True,dump_only=True)
+    # todo apply this to schema like previous ones
+    commented_recipes = fields.Nested(RecipeSchema, many=True,dump_only=True)
+
+    created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
+    updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
 
     class Meta:
         ordered = True
@@ -88,4 +97,21 @@ class UserSchema(ma.Schema):
     def hash_password(self, data, **kwargs):
         if 'password' in data:
             data['password'] = generate_password_hash(data['password'])
+        return data
+
+    @pre_dump()
+    def recipes(self, data, **kwargs):
+        if 'recipes' in data:
+            data['liked_recipes'] = []
+            data['saved_recipes'] = []
+            data['created_recipes'] = []
+            for r in data['recipes']:
+                if r['type'] == RECIPES_BACKGROUND_TYPE_LIKED:
+                    data['liked_recipes'].append(r['recipe'])
+                elif r['type'] == RECIPES_BACKGROUND_TYPE_SAVED:
+                    data['saved_recipes'].append(r['recipe'])
+                elif r['type'] == RECIPES_BACKGROUND_TYPE_CREATED:
+                    data['created_recipes'].append(r['recipe'])
+            data.pop('recipes')
+
         return data

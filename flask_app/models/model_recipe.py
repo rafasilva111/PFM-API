@@ -12,6 +12,11 @@ from flask_app.models.base_model import BaseModel
 from flask_app.models.model_metadata import MetadataSchema
 
 
+
+RECIPES_BACKGROUND_TYPE_LIKED = "LIKED"
+RECIPES_BACKGROUND_TYPE_SAVED = "SAVED"
+RECIPES_BACKGROUND_TYPE_CREATED = "CREATED"
+
 class Recipe(BaseModel):
     title = CharField(null=False)
     description = CharField(null=False)

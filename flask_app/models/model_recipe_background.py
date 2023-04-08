@@ -10,6 +10,7 @@ from flask_app.models.model_recipe import Recipe
 from flask_app.models.model_user import User
 
 
+
 # Database
 
 class RecipeBackground(BaseModel):
