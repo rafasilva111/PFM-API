@@ -92,16 +92,16 @@ def register_user():
     # fills db objects
 
     try:
-        new_user = UserDB(**data)
+        user = UserDB(**data)
         # calculate age
         today = date.today()
-        new_user.age = today.year - data['birth_date'].year - (
+        user.age = today.year - data['birth_date'].year - (
                     (today.month, today.day) < (data['birth_date'].month, data['birth_date'].day))
     except Exception as e:
         return Response(status=400, response=json.dumps(e), mimetype="application/json")
 
     # commit them
-    new_user.save()
+    user.save()
 
     return Response(status=201)
 
@@ -129,4 +129,4 @@ def logout():
     now = datetime.now(timezone.utc)
     token_block_record = TokenBlocklist(jti=jti, created_at=now)
     token_block_record.save()
-    return Response(status=200, response=json.dumps("User logged out sucessfully."))
+    return Response(status=204)
