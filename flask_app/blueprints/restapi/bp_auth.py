@@ -114,7 +114,18 @@ def get_user_session():
     user_id = get_jwt_identity()
 
     # query
-    user_record = UserDB.get(user_id)
+    try:
+        user_record = UserDB.get(user_id)
+    except DoesNotExist as e:
+        # Otherwise block user token (user cant be logged in and stil reach this far)
+        # this only occurs when accounts are not in db
+        jti = get_jwt()["jti"]
+        now = datetime.now(timezone.utc)
+        token_block_record = TokenBlocklist(jti=jti, created_at=now)
+        token_block_record.save()
+        return Response(status=400, response="User couln't be found.")
+
+
 
     userResponse = model_to_dict(user_record, backrefs=True, recurse=True, manytomany=True)
     userSchema = UserSchema().dump(userResponse)
