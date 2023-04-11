@@ -12,6 +12,11 @@ from flask_app.models.base_model import BaseModel
 from flask_app.models.model_metadata import MetadataSchema
 
 
+
+RECIPES_BACKGROUND_TYPE_LIKED = "LIKED"
+RECIPES_BACKGROUND_TYPE_SAVED = "SAVED"
+RECIPES_BACKGROUND_TYPE_CREATED = "CREATED"
+
 class Recipe(BaseModel):
     title = CharField(null=False)
     description = CharField(null=False)
@@ -40,6 +45,16 @@ def get_recipe_schema():
     return RecipeSchema
 
 
+class IngredientSchema(ma.Schema):
+    name = fields.String(required=True)
+    quantity = fields.String(required=True)
+
+
+class PreparationSchema(ma.Schema):
+    step = fields.Integer(required=True)
+    description = fields.String(required=True)
+
+
 class RecipeListSchema(ma.Schema):
     metadata = fields.Nested(MetadataSchema, required=True)
     results = fields.List(fields.Nested(lambda: MetadataSchema()))
@@ -58,9 +73,9 @@ class RecipeSchema(ma.Schema):
     likes = fields.Integer(default=0, required=False)
     views = fields.Integer(default=0, required=False)
 
-    ingredients = fields.Dict(required=True)
+    ingredients = fields.Nested(IngredientSchema, required=True, many=True)
+    preparation = fields.Nested(PreparationSchema, required=True, many=True)
     nutrition_informations = fields.Dict(required=True)
-    preparation = fields.Dict(required=True)
     backgrounds = fields.Dict(required=True, dump_only=True)
     tags = fields.List(fields.String(), required=True)
 

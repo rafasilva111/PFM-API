@@ -8,28 +8,26 @@ _metadata_template = {
     "total_pages": 0,
     "total_items": 0,
     "items_per_page": 0,
-    "Links": [
-    ]
-
+    "next": None,
+    "previous": None
 }
 
 
 def build_metadata(page, page_size, total_pages, total_units, ENDPOINT):
     _metadata = _metadata_template.copy()
-    if total_pages > 1:
-        _metadata['Links'] = []
+    _metadata['next'] = None
+    _metadata['previous'] = None
 
-        if page < total_pages:
-            next_link = page + 1
-            _metadata['Links'].append(
-                {"next": f"/api/v1/{ENDPOINT}?page={next_link}&page_size={page_size}"},
-            )
-        if page > 1:
-            previous_link = page - 1
-            _metadata['Links'].append(
-                {"previous": f"/api/v1/{ENDPOINT}?page={previous_link}&page_size={page_size}"})
+    if page < total_pages:
+        next_link = page + 1
+        _metadata['next'] = f"/api/v1/{ENDPOINT}?page={next_link}&page_size={page_size}"
     else:
-        _metadata.pop('Links')
+        _metadata.pop('next')
+    if page > 1:
+        previous_link = page - 1
+        _metadata['previous'] = f"/api/v1/{ENDPOINT}?page={previous_link}&page_size={page_size}"
+    else:
+        _metadata.pop('previous')
     _metadata['current_page'] = page
     _metadata['items_per_page'] = page_size
     _metadata['total_pages'] = total_pages

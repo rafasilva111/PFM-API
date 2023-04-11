@@ -11,6 +11,7 @@ from flask_app.ext.database import db
 from ...models.model_auth import LoginSchema, TokenBlocklist
 from ...models.model_user import User as UserDB, UserSchema
 from datetime import date
+
 # Create blue print
 
 auth_blueprint = Blueprint('auth_blueprint', __name__, url_prefix="/api/v1/auth")
@@ -67,7 +68,7 @@ def login_user():
     return Response(status=200, response=json.dumps(response), mimetype="application/json")
 
 
-@auth_blueprint.route('/register', methods=['POST'])
+@auth_blueprint.route('', methods=['POST'])
 def register_user():
     # Get json data
 
@@ -88,41 +89,48 @@ def register_user():
     except:
         pass
 
-
     # fills db objects
 
     try:
-        new_user = UserDB(**data)
+        user = UserDB(**data)
         # calculate age
         today = date.today()
-        new_user.age = today.year - data['birth_date'].year - ((today.month, today.day) < (data['birth_date'].month, data['birth_date'].day))
+        user.age = today.year - data['birth_date'].year - (
+                    (today.month, today.day) < (data['birth_date'].month, data['birth_date'].day))
     except Exception as e:
         return Response(status=400, response=json.dumps(e), mimetype="application/json")
 
     # commit them
-    new_user.save()
+    user.save()
 
     return Response(status=201)
 
 
-
-@auth_blueprint.route('/', methods=['GET'])
+@auth_blueprint.route('', methods=['GET'])
 @jwt_required()
 def get_user_session():
     # gets user auth id
 
     user_id = get_jwt_identity()
 
-    user_record = UserDB.get(user_id)
+    # query
+    try:
+        user_record = UserDB.get(user_id)
+    except DoesNotExist as e:
+        # Otherwise block user token (user cant be logged in and stil reach this far)
+        # this only occurs when accounts are not in db
+        jti = get_jwt()["jti"]
+        now = datetime.now(timezone.utc)
+        token_block_record = TokenBlocklist(jti=jti, created_at=now)
+        token_block_record.save()
+        return Response(status=400, response="User couln't be found.")
 
-    userResponse = model_to_dict(user_record)
 
-    userResponse['created_date'] = userResponse['created_date'].strftime("%d/%m/%Y, %H:%M:%S")
-    userResponse['updated_date'] = userResponse['updated_date'].strftime("%d/%m/%Y, %H:%M:%S")
-    userResponse['birth_date'] = userResponse['birth_date'].strftime("%d/%m/%Y")
 
-    return Response(status=200, response=json.dumps(userResponse), mimetype="application/json")
+    userResponse = model_to_dict(user_record, backrefs=True, recurse=True, manytomany=True)
+    userSchema = UserSchema().dump(userResponse)
 
+    return Response(status=200, response=json.dumps(userSchema), mimetype="application/json")
 
 
 @auth_blueprint.route("/logout", methods=["DELETE"])
@@ -132,4 +140,4 @@ def logout():
     now = datetime.now(timezone.utc)
     token_block_record = TokenBlocklist(jti=jti, created_at=now)
     token_block_record.save()
-    return Response(status=200, response=json.dumps("User logged out sucessfully."))
+    return Response(status=204)
