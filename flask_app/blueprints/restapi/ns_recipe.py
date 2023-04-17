@@ -197,6 +197,9 @@ class RecipeResource(Resource):
         try:
             recipe_record = RecipeDB.get(id=args["id"])
             recipe_model = model_to_dict(recipe_record, backrefs=True, recurse=True, manytomany=True)
+            ## add likes to recipe model
+            recipe_model['likes'] = RecipeBackgroundDB.select().where(RecipeBackgroundDB.recipe == recipe_record).count()
+
             recipe_schema = RecipeSchema().dump(recipe_model)
         except peewee.DoesNotExist:
             return Response(status=400, response="Recipe does not exist...")
@@ -473,11 +476,15 @@ class RecipeLikeResource(Resource):
 
         # fills comment object
 
+        # add like
+
+        recipe_to_be_liked
+
         recipe_background, created = RecipeBackgroundDB.get_or_create(user=user, recipe=recipe_to_be_liked,
                                                                       type=RECIPES_BACKGROUND_TYPE_LIKED)
 
         if not created:
-            return Response(status=200, response="User already liked this recipe.")
+            return Response(status=400, response="User already liked this recipe.")
 
         recipe_background.save()
 
@@ -504,11 +511,13 @@ class RecipeLikeResource(Resource):
 
         # query
 
-        RecipeBackgroundDB.delete() \
+        query = RecipeBackgroundDB.delete() \
             .where(
-            RecipeBackgroundDB == like_to_be_deleted_id & RecipeBackgroundDB.user == user_id & RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_LIKED) \
-            .execute()
+            RecipeBackgroundDB == like_to_be_deleted_id & RecipeBackgroundDB.user == user_id & RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_LIKED).execute()
 
+        if query != 1:
+            return Response(status=400, response="User does not like this recipe.")
+        # todo devolver receita apagada (para atualização direta do objecto no android )
         return Response(status=204)
 
 

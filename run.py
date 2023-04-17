@@ -5,6 +5,7 @@ from flask_app.ext import configurations
 from flask_app.ext import application
 from flask_app.ext import jwt
 from flask_app.ext import bycrypt
+from flask_app.ext import database_connection
 from flask_app.ext import database
 from flask_app.blueprints import restapi
 
@@ -14,6 +15,7 @@ def create_run():
     jwt.init_app(app)
     configurations.init_app(app)
     commands.init_app(app)
+    database_connection.init_app(app)
     schema.init_app(app)
     restapi.init_app(app)
     bycrypt.init_app(app)

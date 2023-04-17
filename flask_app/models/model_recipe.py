@@ -26,7 +26,6 @@ class Recipe(BaseModel):
     portion = CharField(null=True)
     time = CharField(null=True)
 
-    likes = IntegerField(default=0, null=False)
     views = IntegerField(default=0, null=False)
     ingredients = BlobField(null=False)
     preparation = BlobField(null=False)
