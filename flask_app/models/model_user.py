@@ -14,8 +14,8 @@ from flask_app.models.base_model import BaseModel
 from flask_app.models.model_recipe import RecipeSchema, RECIPES_BACKGROUND_TYPE_LIKED, RECIPES_BACKGROUND_TYPE_SAVED, \
     RECIPES_BACKGROUND_TYPE_CREATED
 
-PROFILE_TYPE = {"NORMAL", "VIP", "ADMIN"}
-USER_TYPE = {"PUBLIC", "PRIVATE"}
+USER_TYPE = {"NORMAL", "VIP", "ADMIN"}
+PROFILE_TYPE = {"PUBLIC", "PRIVATE"}
 SEXES = {"M", "F", "NA"}
 
 
@@ -48,7 +48,6 @@ class User(BaseModel):
 
     def check_password(self, password):
         return check_password_hash(self.password, password)
-
 
 # Schemas
 
@@ -114,4 +113,24 @@ class UserSchema(ma.Schema):
                     data['created_recipes'].append(r['recipe'])
             data.pop('recipes')
 
+        return data
+
+class UserPatchSchema(ma.Schema):
+    first_name = fields.String(required=False)
+    last_name = fields.String(required=False)
+    password = fields.String(load_only=True)
+    img_source = fields.String(required=False)
+    activity_level = fields.Float(required=False)
+    height = fields.Float(required=False)
+    weight = fields.Float(default=-1)
+    age = fields.Integer(dump_only=False, required=False)
+    updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
+    #patch by admin
+    profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE, required=False)
+    verified = fields.Boolean(required=False)
+    user_type = fields.String(validate=lambda x: x in USER_TYPE, required=False)
+    @pre_load
+    def hash_password(self, data, **kwargs):
+        if 'password' in data:
+            data['password'] = generate_password_hash(data['password'])
         return data

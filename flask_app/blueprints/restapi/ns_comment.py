@@ -53,7 +53,7 @@ class CommentsListResource(Resource):
         if page_size not in [5, 10, 20, 40]:
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
-        ## Pesquisa comments from a recipe id
+        # Pesquisa comments from a recipe id
 
         if recipe_id:
 
@@ -174,13 +174,13 @@ class CommentResource(Resource):
             now = datetime.now(timezone.utc)
             token_block_record = TokenBlocklist(jti=jti, created_at=now)
             token_block_record.save()
-            return Response(status=400, response="Client couln't be found.")
+            return Response(status=400, response="Client couldn't be found.")
 
         try:
             recipe = RecipeDB.get(recipe_id)
         except peewee.DoesNotExist:
             # this only occurs when accounts are not in db
-            return Response(status=400, response="Recipe couln't be found.")
+            return Response(status=400, response="Recipe couldn't be found.")
 
         # fills comment object
 

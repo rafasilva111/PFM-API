@@ -1,15 +1,16 @@
 import json
 import math
-
+from datetime import datetime, timezone
+import peewee
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from flask_restx import Namespace, Resource, fields, reqparse
 from flask import Response, request
 from playhouse.shortcuts import model_to_dict
-
 from flask_app.ext.database import db
 from .errors import return_error_sql, student_no_exists
+from ...models import TokenBlocklist
 from ...models.model_metadata import build_metadata
-
-from ...models.model_user import User as UserDB, UserSchema
+from ...models.model_user import User as UserDB, UserSchema, UserPatchSchema
 
 # Create name space
 api = Namespace("Users", description="Here are all user endpoints")
@@ -101,69 +102,154 @@ class UserListResource(Resource):
 
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
-    def post(self):
-        """Add new student"""
+@api.route("")
+class UserResource(Resource):
+
+    def get(self):
+        """ Get a user with ID """
+
+        # get args
+        args = parser.parse_args()
+        id = args['id']
+
+        # Validate args
+        if not id:
+            return Response(status=400, response="Missing user id argument.")
+
         try:
-            new_student = Student(**api.payload)
-            db.session.add(new_student)
-            db.session.commit()
-            return {"message": "Student was successfully added", "content": [api.payload]}, 200
+            user = UserDB.get(id)
+            return Response(status=200, response=json.dumps(UserSchema().dump(user)), mimetype="application/json")
+        except peewee.DoesNotExist:
+            return Response(status=400, response="User couldn't be found by this id.")
+
+
+    @jwt_required()
+    def delete(self):
+        """Delete a user by ID"""
+
+        # gets user auth id
+        user_logged_id = get_jwt_identity()
+
+        # check if user exists
+        try:
+            user_logged = UserDB.get(user_logged_id)
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and still reach this far)
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            return Response(status=400, response="User couldn't be found by this id.")
+
+        # get args
+        args = parser.parse_args()
+        id = args['id']
+
+        # Validate args
+        if not id:
+            return Response(status=400, response="Missing user id argument.")
+
+        user_to_delete = user_logged
+        if id != user_logged_id:
+            try:
+                user_to_delete = UserDB.get(id)
+            except peewee.DoesNotExist:
+                return Response(status=400, response="User couldn't be found by this id.")
+
+        # check if user is the one who is trying to delete or if he is admin
+        if id == user_logged_id or user_logged.user_type == "ADMIN":
+            try:
+                user_to_delete.delete_instance(recursive=True)
+                return Response(status=200, response="User deleted successfully.")
+            except peewee.IntegrityError as e:
+                return Response(status=400, response=return_error_sql(e))
+        else:
+            return Response(status=400, response="User can only delete himself.")
+
+
+    @jwt_required()
+    def patch(self):
+        """Patch a user by ID"""
+
+        # gets user auth id
+        user_id = get_jwt_identity()
+
+        # check if user exists
+        try:
+            user_making_patch = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and still reach this far)
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            return Response(status=400, response="User couldn't be found by this id.")
+
+        # check args
+        args = parser.parse_args()
+        id = args['id']
+
+        # validate args
+        if not id:
+            return Response(status=400, response="Missing user id argument.")
+
+        # get data from json
+        data = request.get_json()
+
+        # check if user is the one who is trying to patch
+        if int(id) != user_making_patch.id:
+            return Response(status=400, response="User can only patch himself.")
+
+
+        # validate data through user schema
+        try:
+            user_validated = UserPatchSchema().load(data)
         except Exception as e:
-            return return_error_sql(e)
+            return Response(status=400, response="Error patching user: " + str(e))
 
 
-@api.route("/<int:id>")
-@api.param('id')
-@api.doc("Student partial")
-class StudentResource(Resource):
-
-    def get(self, id):
-        """ Get a student with ID """
-        student = Student.query.get(id)
-        if student is not None:
-            schema = StudentSchema()
-            return schema.dump(student), 200
-        return student_no_exists(id)
-
-    def delete(self, id):
-        """Delete a student by ID"""
         try:
-            student = Student.query.get(id)
-            if student is not None:
-                db.session.delete(student)
-                db.session.commit()
-                schema = StudentSchema()
-                return {"message": "Student was successfully deleted", "content": [schema.dump(student)]}, 200
-            return student_no_exists(id)
-        except Exception as e:
-            return return_error_sql(e)
-
-    def put(self, id):
-        """Put a student by ID"""
-        try:
-            if len(dict(**api.payload)) == len(student_api_model.keys()):
-                student = Student.query.filter_by(id=id).update(dict(**api.payload))
-                if student:
-                    db.session.commit()
-                    return {"message": "Updated successfully"}, 200
-                return student_no_exists(id)
+            updating = False
+            # update user
+            if user_validated['first_name'] and user_making_patch.first_name != user_validated['first_name']:
+                user_making_patch.first_name = user_validated['first_name']
+                updating = True
+            if user_validated['last_name'] and user_making_patch.last_name != user_validated['last_name']:
+                user_making_patch.last_name = user_validated['last_name']
+                updating = True
+            if user_validated['img_source'] and user_making_patch.img_source != user_validated['img_source']:
+                user_making_patch.img_source = user_validated['img_source']
+                updating = True
+            if user_validated['activity_level'] and user_making_patch.activity_level != user_validated['activity_level']:
+                user_making_patch.activity_level = user_validated['activity_level']
+                updating = True
+            if user_validated['height'] and user_making_patch.activity_level != user_validated['activity_level']:
+                user_making_patch.height = user_validated['height']
+                updating = True
+            if user_validated['weight'] and user_making_patch.weight != user_validated['weight']:
+                user_making_patch.weight = user_validated['weight']
+                updating = True
+            if user_validated['age'] and int(user_making_patch.age) != user_validated['age']:
+                user_making_patch.age = user_validated['age']
+                updating = True
+            # if user is admin, he can change other users profile type, verified and user type
+            if user_making_patch.user_type == "ADMIN":
+                if user_validated['profile_type'] and user_making_patch.profile_type != user_validated['profile_type']:
+                    user_making_patch.profile_type = user_validated['profile_type']
+                    updating = True
+                if user_validated['verified'] and user_making_patch.verified != user_validated['verified']:
+                    user_making_patch.verified = user_validated['verified']
+                    updating = True
+                if user_validated['user_type'] and user_making_patch.user_type != user_validated['user_type']:
+                    user_making_patch.user_type = user_validated['user_type']
+                    updating = True
+            # update property updated_date
+            if updating:
+                user_making_patch.updated_date = datetime.now(timezone.utc)
             else:
-                intersection = set(student_api_model.keys()).difference(set(api.payload.keys()))
-                return {
-                           "message": f"You are missing the following fields to be able to perform the PUT method: {intersection}"}, 400
-        except Exception as e:
-            return return_error_sql(e)
-
-    def patch(self, id):
-        """Patch a student by ID"""
-        try:
-            if api.payload:
-                student = Student.query.filter_by(id=id).update(dict(**api.payload))
-                if student:
-                    db.session.commit()
-                    return {"message": "Updated successfully"}
-                return student_no_exists(id)
-            return {
-                       "message": f"You must have at least one of all of the following fields: {set(student_api_model.keys())}"}, 400
+                return Response(status=400, response="Nothing to update")
+            # save data in database
+            user_making_patch.save()
+            return Response(status=201)
         except Exception as e:
             return return_error_sql(e)
