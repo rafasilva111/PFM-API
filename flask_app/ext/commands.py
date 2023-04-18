@@ -1,27 +1,14 @@
-from flask_app.ext.database import DBManager
-# from flask_app.models.model_user import User
-# from flask_app.models.model_recipe import Recipe
-# from flask_app.models.model_recipe_background import RecipeBackground
-
-# from flask_app.models.model_student import Student
-# from flask_app.models.model_school import School
-#
-#
-# from faker import Faker
-#
-# f = Faker()
-#
 
 
-def init_app(app):
+def init_app(app,db):
     ## import db model, otherwise it will not create table
     @app.cli.command("create_db")
     def create_db():
-        DBManager().create_tables()
+        db.create_tables()
 
     @app.cli.command("drop_db")
     def drop_db():
-        DBManager().drop_tables()
+        db.drop_tables()
 
 
     app.cli.add_command(create_db)

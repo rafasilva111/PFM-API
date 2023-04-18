@@ -19,34 +19,31 @@ host = os.environ.get('MYSQL_HOST') if os.environ.get('MYSQL_HOST') else "localh
 db = MySQLDatabase(database=database, user=user, password=password,
                    host=host)
 
-models = [TokenBlocklist, NutritionInformation, Recipe, RecipeBackground, Tag, User, RecipeTagThrough, Comment,Follow]
+models = [TokenBlocklist, NutritionInformation, Recipe, RecipeBackground, Tag, User, RecipeTagThrough, Comment, Follow]
+
+class Database(object):
+
+    def __init__(self,app):
+        self.app = app
+        self.db = db
+        self.register_handlers()
+
+    def init_app(self,app):
+        self.app = app
+
+        return db
 
 
-class DBManager:
-
-    def __init__(self):
-        db.connect()
-
-    def create_tables(self):
-        db.create_tables(models)
+    def connect_db(self):
+        if self.db.is_closed():
+            self.db.connect()
 
 
-    def drop_tables(self):
-        db.drop_tables(models)
+    def close_db_(self,ext):
+        if not db.is_closed():
+            db.close()
 
-    def query_titles(self):
-        return
 
-    # db should be disconnected after every query
-    def close(self):
-        db.close()
-
-    # RECIPE
-
-    def post_recipes(self):
-        try:
-            Recipe.create(title="")
-        except Exception as err:
-            print(err)
-
-        return 1
+    def register_handlers(self):
+        self.app.before_request(self.connect_db)
+        self.app.teardown_request(self.close_db_)
