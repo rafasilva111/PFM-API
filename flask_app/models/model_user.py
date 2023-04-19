@@ -122,7 +122,7 @@ class UserPatchSchema(ma.Schema):
     img_source = fields.String(required=False)
     activity_level = fields.Float(required=False)
     height = fields.Float(required=False)
-    weight = fields.Float(default=-1)
+    weight = fields.Float(required=False)
     age = fields.Integer(dump_only=False, required=False)
     updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
     #patch by admin
