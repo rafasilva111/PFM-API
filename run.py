@@ -26,9 +26,6 @@ def create_run():
 # Create app and factory app
 app = create_run()
 
-def run_app():
-    app.run(debug=False)
-
 
 if __name__ == "__main__":
-    run_app()
+    app.run(debug=False)
