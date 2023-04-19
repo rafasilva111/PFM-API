@@ -1,9 +1,7 @@
 import json
 
 from flask import Response, Blueprint
-from flask_restx import Namespace
-
-from flask_app.ext.database import DBManager
+from flask import current_app as app
 admin_blueprint = Blueprint('admin_blueprint', __name__, url_prefix="/api/v1")
 
 # Admin API Model
@@ -11,9 +9,6 @@ admin_blueprint = Blueprint('admin_blueprint', __name__, url_prefix="/api/v1")
 
 @admin_blueprint.route("/create_tables", methods=["GET"])
 def teste():
-    manager = DBManager()
-    manager.create_tables()
-    manager.close()
-
+    app.db.create_tables()
     return Response(status=200, response=json.dumps("Tables successfully created."))
 

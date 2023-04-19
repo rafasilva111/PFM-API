@@ -19,8 +19,6 @@ from ...models.model_recipe_background import RecipeBackground as RecipeBackgrou
 from ...models.model_nutrition_information import NutritionInformation as NutritionInformationDB
 from .errors import return_error_sql, school_no_exists
 
-
-
 # Create name space
 api = Namespace("Recipes", description="Here are all Recipes endpoints")
 
@@ -85,9 +83,16 @@ class RecipeListResource(Resource):
             # response data
 
             recipes = []
-            for item in query.paginate(page, page_size):
-                recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-                recipes.append(RecipeSchema().dump(recipe))
+            for recipe in query.paginate(page, page_size):
+                recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
+                recipe_schema = RecipeSchema().dump(recipe_model)
+                ## add likes to recipe model
+                # Todo isto devia de ser adicionado no RecipeSchema num pre-dump, mas não estou a conseguir importar as classes sem imports circulares
+
+                recipe_schema['likes'] = RecipeBackgroundDB.select().where(
+                    RecipeBackgroundDB.recipe == recipe).count()
+
+                recipes.append(recipe_schema)
 
             response_holder["result"] = recipes
 
@@ -108,11 +113,16 @@ class RecipeListResource(Resource):
             # response data
 
             recipes = []
-            for item in RecipeDB.select().paginate(page, page_size):
-                recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-                teste = RecipeSchema().dump(recipe)
+            for recipe in RecipeDB.select().paginate(page, page_size):
+                recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
+                recipe_schema = RecipeSchema().dump(recipe_model)
+                ## add likes to recipe model
+                # Todo isto devia de ser adicionado no RecipeSchema num pre-dump, mas não estou a conseguir importar as classes sem imports circulares
 
-                recipes.append(teste)
+                recipe_schema['likes'] = RecipeBackgroundDB.select().where(
+                    RecipeBackgroundDB.recipe == recipe).count()
+
+                recipes.append(recipe_schema)
 
             response_holder["result"] = recipes
 
@@ -198,7 +208,10 @@ class RecipeResource(Resource):
             recipe_record = RecipeDB.get(id=args["id"])
             recipe_model = model_to_dict(recipe_record, backrefs=True, recurse=True, manytomany=True)
             ## add likes to recipe model
-            recipe_model['likes'] = RecipeBackgroundDB.select().where(RecipeBackgroundDB.recipe == recipe_record).count()
+            # Todo isto devia de ser adicionado no RecipeSchema num pre-dump, mas não estou a conseguir importar as classes sem imports circulares
+
+            recipe_model['likes'] = RecipeBackgroundDB.select().where(
+                RecipeBackgroundDB.recipe == recipe_record).count()
 
             recipe_schema = RecipeSchema().dump(recipe_model)
         except peewee.DoesNotExist:
@@ -428,6 +441,7 @@ class RecipeResource(Resource):
     Functionality
 """
 
+
 @api.route("/like")
 class RecipeLikeResource(Resource):
     @jwt_required()
@@ -492,7 +506,23 @@ class RecipeLikeResource(Resource):
 
     @jwt_required()
     def delete(self):
-        """Delete like"""
+        """Delete like ( by background id ) """
+
+        # todo isto temos de criar uma var (args['recipe_background']) (median)
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # Get args
+
+        args = parser.parse_args()
+
+        like_to_be_deleted_id = args['id']
+
+    @jwt_required()
+    def delete(self):
+        """Delete like ( by recipe id, etc)"""
 
         # gets user auth id
 
@@ -513,11 +543,12 @@ class RecipeLikeResource(Resource):
 
         query = RecipeBackgroundDB.delete() \
             .where(
-            RecipeBackgroundDB == like_to_be_deleted_id & RecipeBackgroundDB.user == user_id & RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_LIKED).execute()
+            ((RecipeBackgroundDB.recipe == like_to_be_deleted_id) & (RecipeBackgroundDB.user == user_id)) & (
+                        RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_LIKED)).execute()
 
         if query != 1:
             return Response(status=400, response="User does not like this recipe.")
-        # todo devolver receita apagada (para atualização direta do objecto no android )
+
         return Response(status=204)
 
 
