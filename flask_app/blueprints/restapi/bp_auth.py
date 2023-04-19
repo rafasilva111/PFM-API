@@ -58,7 +58,6 @@ def login_user():
     if not authorized:
         return Response(status=400, response={'Password incorrect.'})
 
-    # revoke old access token todo
 
     # create new
 
