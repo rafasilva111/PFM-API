@@ -8,7 +8,7 @@ def init_app(app,db):
 
     @app.cli.command("drop_db")
     def drop_db():
-        db.drop_tables()
+        db.drop_db()
 
 
     app.cli.add_command(create_db)
