@@ -18,13 +18,13 @@ def create_run():
     schema.init_app(app)
     restapi.init_app(app)
     bycrypt.init_app(app)
-    return app
+    return app,db
 
 
 # Create app and factory app
 
 # Create app and factory app
-app = create_run()
+app, db = create_run()
 
 
 if __name__ == "__main__":
