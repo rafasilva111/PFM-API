@@ -58,7 +58,6 @@ def login_user():
     if not authorized:
         return Response(status=400, response={'Password incorrect.'})
 
-
     # create new
 
     expires = timedelta(days=7)
@@ -95,7 +94,7 @@ def register_user():
         # calculate age
         today = date.today()
         user.age = today.year - data['birth_date'].year - (
-                    (today.month, today.day) < (data['birth_date'].month, data['birth_date'].day))
+                (today.month, today.day) < (data['birth_date'].month, data['birth_date'].day))
     except Exception as e:
         return Response(status=400, response=json.dumps(e), mimetype="application/json")
 
@@ -124,9 +123,7 @@ def get_user_session():
         token_block_record.save()
         return Response(status=400, response="User couln't be found.")
 
-
-
-    userResponse = model_to_dict(user_record, backrefs=True, recurse=True, manytomany=True)
+    userResponse = model_to_dict(user_record)
     userSchema = UserSchema().dump(userResponse)
 
     return Response(status=200, response=json.dumps(userSchema), mimetype="application/json")

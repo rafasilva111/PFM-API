@@ -34,10 +34,10 @@ class Database(object):
         return db
 
     def create_tables(self):
-        return db.create_tables(models)
+        return self.db.create_tables(models)
 
     def drop_db(self):
-        return db.drop_tables(models)
+        return self.db.drop_tables(models)
 
     def connect_db(self):
         if self.db.is_closed():

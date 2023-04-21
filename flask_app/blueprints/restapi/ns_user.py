@@ -150,7 +150,7 @@ class UserResource(Resource):
 
     @jwt_required()
     def patch(self):
-        """Patch a user by ID"""
+        """Patch user auth"""
 
         # gets user auth id
         user_id = get_jwt_identity()
@@ -182,6 +182,9 @@ class UserResource(Resource):
             user_making_patch.updated_date = datetime.utcnow()
             user_making_patch.save()
 
-            return Response(status=204)
+            userResponse = model_to_dict(user_making_patch, backrefs=True, recurse=True, manytomany=True)
+            userSchema = UserSchema().dump(userResponse)
+
+            return Response(status=200, response=json.dumps(userSchema), mimetype="application/json")
         except Exception as e:
             return return_error_sql(e)
