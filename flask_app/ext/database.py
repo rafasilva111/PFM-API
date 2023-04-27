@@ -45,10 +45,14 @@ class Database(object):
 
 
     def close_db_(self,ext):
-        if not db.is_closed():
-            db.close()
+        if not self.db.is_closed():
+            self.db.close()
 
+    def close_db__(self, error):
+        if not self.db.is_closed():
+            self.db.close()
 
     def register_handlers(self):
         self.app.before_request(self.connect_db)
         self.app.teardown_request(self.close_db_)
+        self.app.teardown_appcontext(self.close_db__)
