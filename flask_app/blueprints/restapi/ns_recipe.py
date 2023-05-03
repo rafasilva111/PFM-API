@@ -17,7 +17,6 @@ from ...models.model_tag import Tag as TagDB, RecipeTagThrough as RecipeTagThrou
 from ...models.model_user import User as UserDB
 from ...models.model_recipe_background import RecipeBackground as RecipeBackgroundDB, RecipeBackground
 from ...models.model_nutrition_information import NutritionInformation as NutritionInformationDB
-from ...models.model_comment import Comment as CommentDB
 from .errors import return_error_sql, school_no_exists
 
 # Create name space
@@ -122,7 +121,6 @@ class RecipeListResource(Resource):
 
                 recipe_schema['likes'] = RecipeBackgroundDB.select().where(
                     RecipeBackgroundDB.recipe == recipe).count()
-                recipe_schema['comments'] = CommentDB.select().where(CommentDB.recipe == recipe).count()
 
                 recipes.append(recipe_schema)
 
@@ -216,7 +214,7 @@ class RecipeResource(Resource):
             recipe_schema['likes'] = RecipeBackgroundDB.select().where(
                 RecipeBackgroundDB.recipe == recipe_record).count()
 
-            recipe_schema['comments'] = CommentDB.select().where(CommentDB.recipe == recipe_record).count()
+
 
 
         except peewee.DoesNotExist:

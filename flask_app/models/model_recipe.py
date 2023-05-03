@@ -70,7 +70,6 @@ class RecipeSchema(ma.Schema):
     time = fields.String(required=False)
 
     likes = fields.Integer(default=0, required=False)
-    comments = fields.Integer(default=0, required=False)
     views = fields.Integer(default=0, required=False)
 
     ingredients = fields.Nested(IngredientSchema, required=True, many=True)
