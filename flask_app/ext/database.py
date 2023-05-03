@@ -41,7 +41,7 @@ class Database(object):
     def create_tables(self):
         return db.create_tables(models)
 
-    def drop_db(self):
+    def drop_tables(self):
         return db.drop_tables(models)
 
     def connect_db(self):

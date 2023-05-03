@@ -12,6 +12,9 @@
 pip install flask-cli
 
 
+drop database db_name
+create database db_name
+
 
 
 ACTIVIDADE = {

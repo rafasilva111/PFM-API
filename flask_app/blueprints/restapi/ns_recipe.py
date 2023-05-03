@@ -17,6 +17,7 @@ from ...models.model_tag import Tag as TagDB, RecipeTagThrough as RecipeTagThrou
 from ...models.model_user import User as UserDB
 from ...models.model_recipe_background import RecipeBackground as RecipeBackgroundDB, RecipeBackground
 from ...models.model_nutrition_information import NutritionInformation as NutritionInformationDB
+from ...models.model_comment import Comment as CommentDB
 from .errors import return_error_sql, school_no_exists
 
 # Create name space
@@ -49,7 +50,7 @@ class RecipeListResource(Resource):
         args = parser.parse_args()
 
         string_to_search = args['string']
-        user_id = args['user_id']  # falta procura por user_id
+        user_id = args['user_id']  # todo falta procura por user_id
         page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
 
@@ -121,6 +122,7 @@ class RecipeListResource(Resource):
 
                 recipe_schema['likes'] = RecipeBackgroundDB.select().where(
                     RecipeBackgroundDB.recipe == recipe).count()
+                recipe_schema['comments'] = CommentDB.select().where(CommentDB.recipe == recipe).count()
 
                 recipes.append(recipe_schema)
 
@@ -209,11 +211,14 @@ class RecipeResource(Resource):
             recipe_model = model_to_dict(recipe_record, backrefs=True, recurse=True, manytomany=True)
             ## add likes to recipe model
             # Todo isto devia de ser adicionado no RecipeSchema num pre-dump, mas não estou a conseguir importar as classes sem imports circulares
+            recipe_schema = RecipeSchema().dump(recipe_model)
 
-            recipe_model['likes'] = RecipeBackgroundDB.select().where(
+            recipe_schema['likes'] = RecipeBackgroundDB.select().where(
                 RecipeBackgroundDB.recipe == recipe_record).count()
 
-            recipe_schema = RecipeSchema().dump(recipe_model)
+            recipe_schema['comments'] = CommentDB.select().where(CommentDB.recipe == recipe_record).count()
+
+
         except peewee.DoesNotExist:
             return Response(status=400, response="Recipe does not exist...")
 
