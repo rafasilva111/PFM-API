@@ -75,6 +75,7 @@ def login_user():
 
 @auth_blueprint.route('', methods=['POST'])
 def register_user():
+    """ Register a new user """
     # Get json data
 
     log.info("POST /auth")
