@@ -17,6 +17,7 @@ from ...models.model_metadata import build_metadata
 from ...models.model_user import User as UserDB, UserSchema
 from ...models.model_recipe import Recipe as RecipeDB, RecipeSchema
 from ...models.model_comment import Comment as CommentDB, CommentSchema
+from ...ext.logger import log
 
 # Create name space
 api = Namespace("Comments", description="Here are all comment endpoints")
@@ -39,6 +40,8 @@ class CommentsListResource(Resource):
 
     def get(self):
         """List all comments"""
+
+        log.info("GET /comment/list")
         # Get args
 
         args = parser.parse_args()
@@ -50,8 +53,10 @@ class CommentsListResource(Resource):
         # validate args
 
         if page <= 0:
+            log.info("page cant be negative")
             return Response(status=400, response="page cant be negative")
         if page_size not in [5, 10, 20, 40]:
+            log.info("page_size not in [5, 10, 20, 40]")
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
         # Pesquisa comments from a recipe id
@@ -82,6 +87,7 @@ class CommentsListResource(Resource):
 
             response_holder["result"] = comments
 
+            log.info("Finished GET /comment/list with recipe id")
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
         else:
 
@@ -105,6 +111,7 @@ class CommentsListResource(Resource):
 
             response_holder["result"] = comments
 
+            log.info("Finished GET /comment/list")
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 @api.route("")
@@ -113,6 +120,8 @@ class CommentResource(Resource):
     @jwt_required()
     def get(self):
         """ Get a comment with ID """
+
+        log.info("GET /comment")
         # Get args
 
         args = parser.parse_args()
@@ -129,13 +138,17 @@ class CommentResource(Resource):
             comment_model = model_to_dict(comment_record, backrefs=True, recurse=True, manytomany=True)
             comment_schema = CommentSchema().dump(comment_model)
         except peewee.DoesNotExist:
+            log.error("Recipe does not exist...")
             return Response(status=400, response="Recipe does not exist...")
 
+        log.info("Finished GET /comment")
         return Response(status=200, response=json.dumps(comment_schema), mimetype="application/json")
 
     @jwt_required()
     def post(self):
         """ Post a comment by user """
+
+        log.info("POST /comment")
 
         # Parse json body
 
@@ -150,6 +163,7 @@ class CommentResource(Resource):
         # Validate args
 
         if not args["recipe_id"]:
+            log.error("Missing arguments...")
             return Response(status=400, response="Missing arguments...")
 
         # gets user auth id
@@ -161,6 +175,7 @@ class CommentResource(Resource):
         try:
             comment_validated = CommentSchema().load(json_data)
         except ValidationError as err:
+            log.error("Invalid arguments...")
             return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
 
         # Verify existence of the requested ids model's
@@ -174,12 +189,14 @@ class CommentResource(Resource):
             now = datetime.now(timezone.utc)
             token_block_record = TokenBlocklist(jti=jti, created_at=now)
             token_block_record.save()
+            log.error("Client couldn't be found.")
             return Response(status=400, response="Client couldn't be found.")
 
         try:
             recipe = RecipeDB.get(recipe_id)
         except peewee.DoesNotExist:
             # this only occurs when accounts are not in db
+            log.error("Recipe couldn't be found.")
             return Response(status=400, response="Recipe couldn't be found.")
 
         # fills comment object
@@ -189,11 +206,14 @@ class CommentResource(Resource):
         comment.user = user
         comment.save()
 
+        log.info("Finished POST /comment")
         return Response(status=201)
 
     @jwt_required()
     def patch(self):
         """Patch a comment by ID"""
+
+        log.info("PATCH /comment")
 
         # Parse json body
 
@@ -209,6 +229,7 @@ class CommentResource(Resource):
         # Validate args
 
         if not args["id"]:
+            log.error("Missing id argument...")
             return Response(status=400, response="Missing id argument...")
 
         # if not args["user_id"]:
@@ -219,6 +240,7 @@ class CommentResource(Resource):
         try:
             comment_validated = CommentSchema().load(json_data)
         except ValidationError as err:
+            log.error("Invalid arguments...")
             return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
 
         # Verify existence of the requested ids model's
@@ -232,12 +254,14 @@ class CommentResource(Resource):
             now = datetime.now(timezone.utc)
             token_block_record = TokenBlocklist(jti=jti, created_at=now)
             token_block_record.save()
+            log.error("Client couldn't be found.")
             return Response(status=400, response="Client couldn't be found.")
 
         try:
             comment = CommentDB.get(id=id)
         except peewee.DoesNotExist:
             # this only occurs when accounts are not in db
+            log.error("Comment couldn't be found.")
             return Response(status=400, response="Comment couldn't be found.")
 
         # fills comment object
@@ -248,15 +272,20 @@ class CommentResource(Resource):
                 comment.text = comment_validated["text"]
                 comment.updated_date = datetime.now()
                 comment.save()
+                log.info("Finished PATCH /comment")
                 return Response(status=202)
             else:
+                log.error("Comment can't be updated after 12 hours.")
                 return Response(status=400, response="Comment can't be updated after 12 hours.")
         except peewee.DoesNotExist:
+            log.error("Comment couldn't be updated.")
             return Response(status=400, response="Comment couldn't be updated.")
 
     @jwt_required()
     def delete(self):
         """Delete a comment by ID"""
+
+        log.info("DELETE /comment")
 
         # gets user auth id
         user_auth_id = get_jwt_identity()
@@ -267,6 +296,7 @@ class CommentResource(Resource):
             now = datetime.now(timezone.utc)
             token_block_record = TokenBlocklist(jti=jti, created_at=now)
             token_block_record.save()
+            log.error("Client couldn't be found.")
             return Response(status=400, response="No user found by this id.")
 
         # Get args
@@ -277,15 +307,18 @@ class CommentResource(Resource):
 
         # Validate args
         if not args["id"]:
+            log.error("Missing id argument...")
             return Response(status=400, response="Missing id argument...")
 
         if not args["user_id"]:
+            log.error("Missing user_id argument...")
             return Response(status=400, response="Missing user_id argument...")
 
         # get comment by id
         try:
             comment = CommentDB.get(id=id, user_id=user_id)
         except peewee.DoesNotExist:
+            log.error("No comment found by this id.")
             return Response(status=400, response="No comment found by this id.")
 
         # checks if user is admin or the one who created the comment and deletes the comment
@@ -293,9 +326,12 @@ class CommentResource(Resource):
         if user.user_type == "A" or user.id == comment.user.id:
             try:
                 comment.delete_instance()
+                log.info("Finished DELETE /comment")
                 return Response(status=200, response="Comment deleted successfully.")
             except peewee.DoesNotExist:
+                log.error("No comment found by this id.")
                 return Response(status=400, response="No comment found by this id.")
         else:
+            log.error("You are not authorized to delete this comment.")
             return Response(status=400, response="You are not authorized to delete this comment.")
 

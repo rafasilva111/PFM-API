@@ -71,11 +71,12 @@ class RecipeSchema(ma.Schema):
 
     likes = fields.Integer(default=0, required=False)
     views = fields.Integer(default=0, required=False)
+    comments = fields.Integer(default=0, required=False)
 
     ingredients = fields.Nested(IngredientSchema, required=True, many=True)
     preparation = fields.Nested(PreparationSchema, required=True, many=True)
     nutrition_informations = fields.Dict(required=True)
-    backgrounds = fields.Dict(required=True, dump_only=True)
+    backgrounds = fields.List(fields.Dict(), required=True, dump_only=True)
     tags = fields.List(fields.String(), required=True)
 
     source_rating = fields.String(required=False)
@@ -98,16 +99,35 @@ class RecipeSchema(ma.Schema):
 
     @pre_dump
     def unlist(self, data, **kwargs):
+        data['likes'] = 0
         if 'nutrition_informations' in data:
             data['nutrition_informations'] = data['nutrition_informations'][0]
         if 'backgrounds' in data and data['backgrounds'] != []:
-            data['backgrounds'] = data['backgrounds'][0]
-            data['backgrounds']['user'] = data['backgrounds']['user']['first_name'] + " " + data['backgrounds']['user'][
-                'last_name']
+            for background in data['backgrounds']:
+                background['user'] = background['user']['first_name'] + " " + background['user']['last_name']
+                if background['type'] == RECIPES_BACKGROUND_TYPE_LIKED:
+                    data['likes'] += 1
         if 'tags' in data:
             data['tags'] = [a['title'] for a in data['tags']]
+        if 'comments' in data and data['comments'] != []:
+            data['comments_count'] = len(data['comments'])
         return data
 
+    # @pre_dump
+    # def unlist(self, data, **kwargs):
+    #     if 'nutrition_informations' in data:
+    #         data['nutrition_informations'] = data['nutrition_informations'][0]
+    #     if 'backgrounds' in data and data['backgrounds'] != []:
+    #         data['backgrounds'] = data['backgrounds'][0]
+    #         data['backgrounds']['user'] = data['backgrounds']['user']['first_name'] + " " + data['backgrounds']['user'][
+    #             'last_name']
+    #     if 'tags' in data:
+    #         data['tags'] = [a['title'] for a in data['tags']]
+    #
+    #     if 'comments' in data and data['comments'] != []:
+    #         data['comments_count'] = len(data['comments'])
+    #
+    #     return data
 
 class RecipeSimpleSchema(ma.Schema):
     id = fields.Integer(dump_only=True)

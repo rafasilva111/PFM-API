@@ -11,6 +11,7 @@ from .errors import return_error_sql, student_no_exists
 from ...models import TokenBlocklist
 from ...models.model_metadata import build_metadata
 from ...models.model_user import User as UserDB, UserSchema, UserPatchSchema
+from ...ext.logger import log
 
 # Create name space
 api = Namespace("Users", description="Here are all user endpoints")
@@ -32,6 +33,8 @@ class UserListResource(Resource):
 
     def get(self):
         """List all users"""
+
+        log.info("GET /user/list")
         # Get args
 
         args = parser.parse_args()
@@ -43,8 +46,10 @@ class UserListResource(Resource):
         # validate args
 
         if page <= 0:
+            log.error("page cant be negative")
             return Response(status=400, response="page cant be negative")
         if page_size not in [5, 10, 20, 40]:
+            log.error("page_size not in [5, 10, 20, 40]")
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
         ## Pesquisa por String
@@ -77,6 +82,7 @@ class UserListResource(Resource):
 
             response_holder["result"] = recipes
 
+            log.info("Finished GET /user/list with string")
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
         else:
 
@@ -100,6 +106,7 @@ class UserListResource(Resource):
 
             response_holder["result"] = recipes
 
+            log.info("Finished GET /user/list")
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 @api.route("")
@@ -108,18 +115,23 @@ class UserResource(Resource):
     def get(self):
         """ Get a user with ID """
 
+        log.info("GET /user")
+
         # get args
         args = parser.parse_args()
         id = args['id']
 
         # Validate args
         if not id:
+            log.error("Missing user id argument.")
             return Response(status=400, response="Missing user id argument.")
 
         try:
             user = UserDB.get(id)
+            log.info("Finished GET /user")
             return Response(status=200, response=json.dumps(UserSchema().dump(user)), mimetype="application/json")
         except peewee.DoesNotExist:
+            log.error("User couldn't be found by this id.")
             return Response(status=400, response="User couldn't be found by this id.")
 
 
@@ -127,6 +139,7 @@ class UserResource(Resource):
     def delete(self):
         """Delete a user by ID"""
 
+        log.info("DELETE /user")
         # gets user auth id
         user_logged_id = get_jwt_identity()
 
@@ -139,18 +152,23 @@ class UserResource(Resource):
             now = datetime.now(timezone.utc)
             token_block_record = TokenBlocklist(jti=jti, created_at=now)
             token_block_record.save()
+            log.error("User couldn't be found by this id.")
             return Response(status=400, response="User couldn't be found by this id.")
 
         try:
             user_logged.delete_instance(recursive=True)
+            log.info("Finished DELETE /user")
             return Response(status=200, response="User deleted successfully.")
         except peewee.IntegrityError as e:
+            log.error(return_error_sql(e))
             return Response(status=400, response=return_error_sql(e))
 
 
     @jwt_required()
     def patch(self):
         """Patch a user by ID"""
+
+        log.info("PATCH /user")
 
         # gets user auth id
         user_id = get_jwt_identity()
@@ -164,6 +182,7 @@ class UserResource(Resource):
             now = datetime.now(timezone.utc)
             token_block_record = TokenBlocklist(jti=jti, created_at=now)
             token_block_record.save()
+            log.error("User couldn't be found by this id.")
             return Response(status=400, response="User couldn't be found by this id.")
 
         # get data from json
@@ -173,6 +192,7 @@ class UserResource(Resource):
         try:
             user_validated = UserPatchSchema().load(data)
         except Exception as e:
+            log.error("Error validating user: " + str(e))
             return Response(status=400, response="Error patching user: " + str(e))
 
         try:
@@ -182,6 +202,8 @@ class UserResource(Resource):
             user_making_patch.updated_date = datetime.utcnow()
             user_making_patch.save()
 
+            log.info("Finished PATCH /user")
             return Response(status=204)
         except Exception as e:
+            log.error(return_error_sql(e))
             return return_error_sql(e)
