@@ -16,6 +16,8 @@ from ...models.model_metadata import build_metadata
 
 from ...models.model_user import User as UserDB, UserSchema
 from ...models.model_follow import Follow as FollowDB, FollowedsSchema, FollowersSchema
+from ...models.model_comment import Comment as CommentDB, CommentSchema
+from ...ext.logger import log
 
 # Create name space
 api = Namespace("Follows", description="Here are all comment endpoints")
@@ -37,6 +39,9 @@ class FollowsListResource(Resource):
 
     def get(self):
         """List all comments"""
+
+        log.info("GET /follow/list")
+
         # Get args
 
         args = parser.parse_args()
@@ -48,8 +53,10 @@ class FollowsListResource(Resource):
         # validate args
 
         if page <= 0:
+            log.error("page cant be negative")
             return Response(status=400, response="page cant be negative")
         if page_size not in [5, 10, 20, 40]:
+            log.error("page_size not in [5, 10, 20, 40]")
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
         ## Pesquisa comments from a recipe id
@@ -80,6 +87,7 @@ class FollowsListResource(Resource):
 
             response_holder["result"] = comments
 
+            log.info("Finish GET /follow/list with recipe id")
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
         else:
 
@@ -103,6 +111,7 @@ class FollowsListResource(Resource):
 
             response_holder["result"] = comments
 
+            log.info("Finish GET /follow/list")
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 
@@ -113,6 +122,9 @@ class FollowersResource(Resource):
     @jwt_required()
     def get(self):
         """List all followers"""
+
+        log.info("GET /follow/list/followers")
+
         # gets user auth id
 
         user_id = get_jwt_identity()
@@ -128,8 +140,10 @@ class FollowersResource(Resource):
         # validate args
 
         if page <= 0:
+            log.error("page cant be negative")
             return Response(status=400, response="page cant be negative")
         if page_size not in [5, 10, 20, 40]:
+            log.error("page_size not in [5, 10, 20, 40]")
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
         # declare response holder
@@ -156,6 +170,7 @@ class FollowersResource(Resource):
 
         response_holder["result"] = followers
 
+        log.info("Finish GET /follow/list/followers")
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 
@@ -182,8 +197,10 @@ class FollowersResource(Resource):
         # validate args
 
         if page <= 0:
+            log.error("page cant be negative")
             return Response(status=400, response="page cant be negative")
         if page_size not in [5, 10, 20, 40]:
+            log.error("page_size not in [5, 10, 20, 40]")
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
         # declare response holder
@@ -210,6 +227,7 @@ class FollowersResource(Resource):
 
         response_holder["result"] = followers
 
+        log.info("Finish GET /follow/list/followeds")
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 
@@ -220,6 +238,8 @@ class FollowResource(Resource):
     @jwt_required()
     def get(self):
         """ Get a follow whit ID """
+
+        log.info("GET /follow")
         # todo esta rota ainda não sei se faz sentido, mas é para fazer na mesma
         # Get args
 
@@ -228,6 +248,7 @@ class FollowResource(Resource):
         # Validate args
 
         if not args["id"]:
+            log.error("Invalid arguments...")
             return Response(status=400, response="Invalid arguments...")
 
         # Get and Serialize db model
@@ -237,13 +258,17 @@ class FollowResource(Resource):
             comment_model = model_to_dict(comment_record, backrefs=True, recurse=True, manytomany=True)
             comment_schema = CommentSchema().dump(comment_model)
         except peewee.DoesNotExist:
+            log.error("Recipe does not exist...")
             return Response(status=400, response="Recipe does not exist...")
 
+        log.info("Finish GET /follow")
         return Response(status=200, response=json.dumps(comment_schema), mimetype="application/json")
 
     @jwt_required()
     def post(self):
         """ Post a comment by user """
+
+        log.info("POST /follow")
 
         # gets user auth id
 
@@ -258,9 +283,11 @@ class FollowResource(Resource):
         # Validate args
 
         if not args["user_id"]:
+            log.error("Missing arguments...")
             return Response(status=400, response="Missing arguments...")
 
         if args["user_id"] == user_id:
+            log.error("User can't follow himself...")
             return Response(status=400, response="User can't follow himself...")
 
         # Verify existence of the requested ids model's
@@ -268,6 +295,7 @@ class FollowResource(Resource):
         try:
             user_to_be_followed = UserDB.get(user_to_be_followed_id)
         except peewee.DoesNotExist:
+            log.error("User to be followed, couln't be found.")
             return Response(status=400, response="User to be followed, couln't be found.")
 
         try:
@@ -279,6 +307,7 @@ class FollowResource(Resource):
             now = datetime.now(timezone.utc)
             token_block_record = TokenBlocklist(jti=jti, created_at=now)
             token_block_record.save()
+            log.error("User couln't be found.")
             return Response(status=400, response="User couln't be found.")
 
         # fills comment object
@@ -286,8 +315,10 @@ class FollowResource(Resource):
         follow, created = FollowDB.get_or_create(follower=user, followed=user_to_be_followed)
 
         if not created:
+            log.error("User already follows this account.")
             return Response(status=200, response="User already follows this account.")
 
+        log.info("Finish POST /follow")
         return Response(status=201)
 
     @jwt_required()
@@ -299,6 +330,8 @@ class FollowResource(Resource):
     @jwt_required()
     def delete(self):
         """Delete a comment by ID"""
+
+        log.info("DELETE /follow")
 
         # gets user auth id
 
@@ -314,6 +347,7 @@ class FollowResource(Resource):
         # Validate args
 
         if not id and not user_id:
+            log.error("Missing arguments...")
             return Response(status=400, response="Missing arguments...")
 
         # delete by referencing the user id
@@ -321,6 +355,7 @@ class FollowResource(Resource):
             try:
                 follow = FollowDB.get(FollowDB.followed==user_id)
             except peewee.DoesNotExist:
+                log.error("User does not follow referenced account.")
                 return Response(status=400, response="User does not follow referenced account.")
 
             follow.delete_instance()
@@ -330,8 +365,10 @@ class FollowResource(Resource):
             try:
                 follow = FollowDB.get(FollowDB.followed == user_id)
             except peewee.DoesNotExist:
+                log.error("User does not follow referenced account.")
                 return Response(status=400, response="User does not follow referenced account.")
 
             follow.delete_instance()
 
+        log.info("Finish DELETE /follow")
         return Response(status=200)
