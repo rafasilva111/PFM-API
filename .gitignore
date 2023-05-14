@@ -4,3 +4,7 @@ flask_server.pem
 .idea/
 /warnings.log
 .idea/workspace.xml
+
+logs/info.log
+
+logs/debug.log

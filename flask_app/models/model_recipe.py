@@ -110,7 +110,9 @@ class RecipeSchema(ma.Schema):
         if 'tags' in data:
             data['tags'] = [a['title'] for a in data['tags']]
         if 'comments' in data and data['comments'] != []:
-            data['comments_count'] = len(data['comments'])
+            data['comments'] = len(data['comments'])
+        else:
+            data['comments'] = 0
         return data
 
     # @pre_dump
