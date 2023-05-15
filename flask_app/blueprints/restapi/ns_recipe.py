@@ -119,12 +119,6 @@ class RecipeListResource(Resource):
             for recipe in RecipeDB.select().paginate(page, page_size):
                 recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
                 recipe_schema = RecipeSchema().dump(recipe_model)
-                ## add likes to recipe model
-                # Todo isto devia de ser adicionado no RecipeSchema num pre-dump, mas não estou a conseguir importar as classes sem imports circulares
-
-                recipe_schema['likes'] = RecipeBackgroundDB.select().where(
-                    RecipeBackgroundDB.recipe == recipe).count()
-
                 recipes.append(recipe_schema)
 
             response_holder["result"] = recipes
@@ -218,14 +212,8 @@ class RecipeResource(Resource):
             recipe_record = RecipeDB.get(id=args["id"])
             recipe_model = model_to_dict(recipe_record, backrefs=True, recurse=True, manytomany=True)
             ## add likes to recipe model
-            # Todo isto devia de ser adicionado no RecipeSchema num pre-dump, mas não estou a conseguir importar as classes sem imports circulares
+
             recipe_schema = RecipeSchema().dump(recipe_model)
-
-            recipe_schema['likes'] = RecipeBackgroundDB.select().where(
-                RecipeBackgroundDB.recipe == recipe_record).count()
-
-
-
 
         except peewee.DoesNotExist:
             log.error("Recipe does not exist...")

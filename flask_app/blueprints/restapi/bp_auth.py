@@ -8,7 +8,9 @@ from peewee import DoesNotExist
 from playhouse.shortcuts import model_to_dict
 
 from flask_app.ext.database import db
+from ...models import Recipe
 from ...models.model_auth import LoginSchema, TokenBlocklist
+from ...models.model_recipe import RecipeSchema
 from ...models.model_user import User as UserDB, UserSchema
 from datetime import date
 from ...ext.logger import log
@@ -139,9 +141,10 @@ def get_user_session():
         log.error("User couln't be found.")
         return Response(status=400, response="User couln't be found.")
 
-
+    from ...models.model_recipe_background import RecipeBackground as RecipeBackgroundDB
 
     userResponse = model_to_dict(user_record, backrefs=True, recurse=True, manytomany=True)
+
     userSchema = UserSchema().dump(userResponse)
 
     log.info("GET /auth")

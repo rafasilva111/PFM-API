@@ -13,6 +13,7 @@ from flask_app.models.model_metadata import MetadataSchema
 
 
 
+
 RECIPES_BACKGROUND_TYPE_LIKED = "LIKED"
 RECIPES_BACKGROUND_TYPE_SAVED = "SAVED"
 RECIPES_BACKGROUND_TYPE_CREATED = "CREATED"
@@ -105,8 +106,9 @@ class RecipeSchema(ma.Schema):
         if 'backgrounds' in data and data['backgrounds'] != []:
             for background in data['backgrounds']:
                 background['user'] = background['user']['first_name'] + " " + background['user']['last_name']
-                if background['type'] == RECIPES_BACKGROUND_TYPE_LIKED:
-                    data['likes'] += 1
+
+        from flask_app.models import RecipeBackground
+        data['likes'] = RecipeBackground.select().where(RecipeBackground.recipe == data['id']).count()
         if 'tags' in data:
             data['tags'] = [a['title'] for a in data['tags']]
         if 'comments' in data and data['comments'] != []:
