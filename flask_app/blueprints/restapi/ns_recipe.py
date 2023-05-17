@@ -759,8 +759,10 @@ class RecipeSaveResource(Resource):
 
         RecipeBackgroundDB.delete() \
             .where(
-            RecipeBackgroundDB == like_to_be_deleted_id & RecipeBackgroundDB.user == user_id & RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_SAVED) \
-            .execute()
+            ((RecipeBackgroundDB.recipe == like_to_be_deleted_id) & (RecipeBackgroundDB.user == user_id)) & (
+                    RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_SAVED)).execute()
+
+
 
         log.info("Finished DELETE /save")
         return Response(status=204)

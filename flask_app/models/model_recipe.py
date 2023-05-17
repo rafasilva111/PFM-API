@@ -108,7 +108,7 @@ class RecipeSchema(ma.Schema):
                 background['user'] = background['user']['first_name'] + " " + background['user']['last_name']
 
         from flask_app.models import RecipeBackground
-        data['likes'] = RecipeBackground.select().where(RecipeBackground.recipe == data['id']).count()
+        data['likes'] = RecipeBackground.select().where((RecipeBackground.recipe == data['id']) & (RecipeBackground.type == RECIPES_BACKGROUND_TYPE_LIKED)).count()
         if 'tags' in data:
             data['tags'] = [a['title'] for a in data['tags']]
         if 'comments' in data and data['comments'] != []:
