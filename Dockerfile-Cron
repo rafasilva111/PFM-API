@@ -9,7 +9,7 @@ RUN yum update -y && \
 COPY ./scripts /scripts
 
 # Copy the cron schedule file to the container
-COPY ./cron_schedule.txt /etc/cron.d/cron_schedule
+COPY ./scripts/cron_schedule.txt /etc/cron.d/cron_schedule
 
 # Give execution rights on the cron schedule file
 RUN chmod 0644 /etc/cron.d/cron_schedule
