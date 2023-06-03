@@ -203,7 +203,9 @@ class UserResource(Resource):
             user_making_patch.save()
 
             log.info("Finished PATCH /user")
-            return Response(status=204)
+            return Response(status=200,response=json.dumps(UserSchema().dump(user_making_patch)), mimetype="application/json")
         except Exception as e:
             log.error(return_error_sql(e))
             return return_error_sql(e)
+
+
