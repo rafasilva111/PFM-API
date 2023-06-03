@@ -1,5 +1,12 @@
 version: '3.1'
 services:
+    cronjob:
+      build:
+        context: .
+        dockerfile: Dockerfile-Cron
+      volumes:
+        - ./scripts:/scripts
+      command: cron -f
     flask_app:
         container_name: flask_app
         restart: always
