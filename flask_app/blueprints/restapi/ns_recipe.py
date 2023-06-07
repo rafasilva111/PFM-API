@@ -51,7 +51,6 @@ class RecipeListResource(Resource):
         # Get args
         args = parser.parse_args()
 
-        string_to_search = args['string']
         user_id = args['user_id']  # todo falta procura por user_id
         page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
@@ -63,67 +62,40 @@ class RecipeListResource(Resource):
         if page_size not in [5, 10, 20, 40]:
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
+        # declare response holder
+
+        response_holder = {}
+
+        # query building
+
         # Pesquisa por String
 
-        if string_to_search:
-
-            # declare response holder
-
-            response_holder = {}
-
-            # build query
+        if args['string']:
 
             query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
-                .where(TagDB.title.contains(string_to_search) | RecipeDB.title.contains(string_to_search))
-
-            # metadata
-
-            total_recipes = int(query.count())
-            total_pages = math.ceil(total_recipes / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
-            response_holder["_metadata"] = metadata
-
-            # response data
-
-            recipes = []
-            for recipe in query.paginate(page, page_size):
-                recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
-                recipe_schema = RecipeSchema().dump(recipe_model)
-                ## add likes to recipe model
-                # Todo isto devia de ser adicionado no RecipeSchema num pre-dump, mas não estou a conseguir importar as classes sem imports circulares
-
-                recipe_schema['likes'] = RecipeBackgroundDB.select().where(
-                    RecipeBackgroundDB.recipe == recipe).count()
-
-                recipes.append(recipe_schema)
-
-            response_holder["result"] = recipes
-
-            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+                .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string']))
         else:
 
-            # declare response holder
+            query = RecipeDB.select()
 
-            response_holder = {}
+        # metadata
 
-            # metadata
+        total_recipes = int(query.count())
+        total_pages = math.ceil(total_recipes / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
+        response_holder["_metadata"] = metadata
 
-            total_recipes = int(RecipeDB.select().count())
-            total_pages = math.ceil(total_recipes / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
-            response_holder["_metadata"] = metadata
+        # response data
 
-            # response data
+        recipes = []
+        for recipe in query.paginate(page, page_size):
+            recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
+            recipe_schema = RecipeSchema().dump(recipe_model)
+            recipes.append(recipe_schema)
 
-            recipes = []
-            for recipe in RecipeDB.select().paginate(page, page_size):
-                recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
-                recipe_schema = RecipeSchema().dump(recipe_model)
-                recipes.append(recipe_schema)
-
-            response_holder["result"] = recipes
-            log.info("Finished GET /recipe/list")
-            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+        response_holder["result"] = recipes
+        log.info("Finished GET /recipe/list")
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
     def post(self):
         """Create a new recipe by admin (placeholder until admin endpoints are created)"""
@@ -464,6 +436,91 @@ class RecipeResource(Resource):
 
 
 """
+    Sorting
+"""
+
+parser.add_argument('by', type=str, help='Type of background sort type.')
+
+
+@api.route("/list/background/sort")
+@api.doc("get_recipe_list", model=RecipeDB)
+class RecipeListResource(Resource):
+
+    @api.expect(parser)
+    def get(self):
+        """List recipes by string search and all"""
+        # logging
+        log.info("GET /recipe/list")
+
+        # Get args
+        args = parser.parse_args()
+
+        page = int(args['page']) if args['page'] else 1
+        page_size = int(args['page_size']) if args['page_size'] else 5
+        by = f"'{str(args['by'])}'" if args['by'] and args['by'] in [RECIPES_BACKGROUND_TYPE_LIKED,
+                                                                     RECIPES_BACKGROUND_TYPE_SAVED,
+                                                                     RECIPES_BACKGROUND_TYPE_CREATED] else None
+
+        # validate args
+
+        if not by:
+            return Response(status=400, response="Parameter by is invalid.")
+        if page <= 0:
+            return Response(status=400, response="page cant be negative")
+        if page_size not in [5, 10, 20, 40]:
+            return Response(status=400, response="page_size not in [5, 10, 20, 40]")
+
+        # declare response holder
+
+        response_holder = {}
+
+        # query building
+
+        # Pesquisa por String
+        if args['string']:
+            query = (RecipeDB
+                     .select(RecipeDB, peewee.fn.COUNT(peewee.Case(RecipeBackground.type, [(peewee.SQL(by), 1)]))
+                             .alias('like_count'))
+                     .distinct()
+                     .join(RecipeBackground, peewee.JOIN.LEFT_OUTER)
+                     .switch(RecipeDB)
+                     .join(RecipeTagThroughDB).join(TagDB)
+                     .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string']))
+                     .group_by(RecipeDB.id, RecipeDB.title)
+                     .order_by(peewee.SQL('like_count').desc()))
+
+
+        else:
+
+            query = (RecipeDB
+                     .select(RecipeDB, peewee.fn.COUNT(peewee.Case(RecipeBackground.type, [(peewee.SQL(by), 1)]))
+                             .alias('like_count'))
+                     .distinct()
+                     .join(RecipeBackground, peewee.JOIN.LEFT_OUTER)
+                     .group_by(RecipeDB.id, RecipeDB.title)
+                     .order_by(peewee.SQL('like_count').desc()))
+
+        # metadata
+
+        total_recipes = int(query.count())
+        total_pages = math.ceil(total_recipes / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
+        response_holder["_metadata"] = metadata
+
+        # response data
+
+        recipes = []
+        for recipe in query.paginate(page, page_size):
+            recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
+            recipe_schema = RecipeSchema().dump(recipe_model)
+            recipes.append(recipe_schema)
+
+        response_holder["result"] = recipes
+        log.info("Finished GET /recipe/list")
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+
+
+"""
     Functionality
 """
 
@@ -524,8 +581,6 @@ class RecipeLikeResource(Resource):
 
         # add like
 
-        recipe_to_be_liked
-
         recipe_background, created = RecipeBackgroundDB.get_or_create(user=user, recipe=recipe_to_be_liked,
                                                                       type=RECIPES_BACKGROUND_TYPE_LIKED)
 
@@ -582,7 +637,7 @@ class RecipeLikeResource(Resource):
         query = RecipeBackgroundDB.delete() \
             .where(
             ((RecipeBackgroundDB.recipe == like_to_be_deleted_id) & (RecipeBackgroundDB.user == user_id)) & (
-                        RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_LIKED)).execute()
+                    RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_LIKED)).execute()
 
         if query != 1:
             log.error("User does not like this recipe.")
@@ -761,8 +816,6 @@ class RecipeSaveResource(Resource):
             .where(
             ((RecipeBackgroundDB.recipe == like_to_be_deleted_id) & (RecipeBackgroundDB.user == user_id)) & (
                     RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_SAVED)).execute()
-
-
 
         log.info("Finished DELETE /save")
         return Response(status=204)
