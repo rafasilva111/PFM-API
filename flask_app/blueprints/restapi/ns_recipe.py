@@ -10,6 +10,8 @@ from marshmallow import ValidationError
 from playhouse.shortcuts import model_to_dict
 
 from ...models import TokenBlocklist
+from ...models.model_ingredient import IngredientBase
+from ...models.model_ingredient_quantity import Ingredient
 from ...models.model_metadata import MetadataSchema, build_metadata
 from ...models.model_recipe import Recipe as RecipeDB, RecipeSchema, RECIPES_BACKGROUND_TYPE_CREATED, \
     RECIPES_BACKGROUND_TYPE_LIKED, RECIPES_BACKGROUND_TYPE_SAVED
@@ -31,9 +33,14 @@ parser.add_argument('page_size', type=int, help='The page size.')
 parser.add_argument('id', type=int, help='The recipe id to be search.')
 parser.add_argument('string', type=str, help='The string to be search.')
 parser.add_argument('user_id', type=int, help='The user id to be search.')
+parser.add_argument('by', type=str, help='Type of background sort type.')
 
 ENDPOINT = "/recipe"
 
+## Measuring constants
+COLHER_DE_CHA = 4
+
+RECIPES_SORT_DATE = "DATE"
 
 # TODO get recipes by user?
 
@@ -51,10 +58,10 @@ class RecipeListResource(Resource):
         # Get args
         args = parser.parse_args()
 
-        string_to_search = args['string']
         user_id = args['user_id']  # todo falta procura por user_id
         page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
+        by = str(args['by']) if args['by'] and args['by'] in [RECIPES_SORT_DATE] else RECIPES_SORT_DATE
 
         # validate args
 
@@ -63,67 +70,53 @@ class RecipeListResource(Resource):
         if page_size not in [5, 10, 20, 40]:
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
-        # Pesquisa por String
+        # declare response holder
 
-        if string_to_search:
+        response_holder = {}
 
-            # declare response holder
+        # query building
 
-            response_holder = {}
+        # Check if sorted
 
-            # build query
+        # Check if sorted by date
+        if args['by'] == RECIPES_SORT_DATE:
+            # Pesquisa por String
+            if args['string']:
 
-            query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
-                .where(TagDB.title.contains(string_to_search) | RecipeDB.title.contains(string_to_search))
+                query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
+                    .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string'])) \
+                    .order_by(RecipeDB.created_date)
+            else:
 
-            # metadata
-
-            total_recipes = int(query.count())
-            total_pages = math.ceil(total_recipes / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
-            response_holder["_metadata"] = metadata
-
-            # response data
-
-            recipes = []
-            for recipe in query.paginate(page, page_size):
-                recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
-                recipe_schema = RecipeSchema().dump(recipe_model)
-                ## add likes to recipe model
-                # Todo isto devia de ser adicionado no RecipeSchema num pre-dump, mas não estou a conseguir importar as classes sem imports circulares
-
-                recipe_schema['likes'] = RecipeBackgroundDB.select().where(
-                    RecipeBackgroundDB.recipe == recipe).count()
-
-                recipes.append(recipe_schema)
-
-            response_holder["result"] = recipes
-
-            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+                query = RecipeDB.select().order_by(RecipeDB.created_date)
         else:
+            # Pesquisa por String
+            if args['string']:
 
-            # declare response holder
+                query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
+                    .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string']))
+            else:
 
-            response_holder = {}
+                query = RecipeDB.select()
 
-            # metadata
+        # metadata
 
-            total_recipes = int(RecipeDB.select().count())
-            total_pages = math.ceil(total_recipes / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
-            response_holder["_metadata"] = metadata
+        total_recipes = int(query.count())
+        total_pages = math.ceil(total_recipes / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
+        response_holder["_metadata"] = metadata
 
-            # response data
+        # response data
 
-            recipes = []
-            for recipe in RecipeDB.select().paginate(page, page_size):
-                recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
-                recipe_schema = RecipeSchema().dump(recipe_model)
-                recipes.append(recipe_schema)
+        recipes = []
+        for recipe in query.paginate(page, page_size):
+            recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
+            recipe_schema = RecipeSchema().dump(recipe_model)
+            recipes.append(recipe_schema)
 
-            response_holder["result"] = recipes
-            log.info("Finished GET /recipe/list")
-            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+        response_holder["result"] = recipes
+        log.info("Finished GET /recipe/list")
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
     def post(self):
         """Create a new recipe by admin (placeholder until admin endpoints are created)"""
@@ -149,7 +142,6 @@ class RecipeListResource(Resource):
         # fills recipe object
         recipe = RecipeDB(**recipe_validated)
         recipe.preparation = str(preparation).encode()
-        recipe.ingredients = str(ingredients).encode()
         # use .decode() to decode
         recipe.save()
 
@@ -181,11 +173,59 @@ class RecipeListResource(Resource):
             recipe.delete_instance(recursive=True)
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
+        # build multi to multi relation to Ingredient Quantity
+        recipe.save()
+        try:
+            if ingredients and ingredients != {}:
+                for i in ingredients:
+                    ingredient, created = IngredientBase.get_or_create(name=i['name'])
+                    if created:
+                        ingredient.save()
+                    if i['quantity_original']:
+                        try:
+                            quantity_normalized = normalize_quantity(i['quantity_original'])
+                        except Exception as e:
+                            quantity_normalized = float(0)
+                            log.error("Tags Table has some error...")
+                    ingredient_quantity = Ingredient(quantity_original=i['quantity_original'], quantity_normalized=quantity_normalized)
+                    ingredient_quantity.ingredient = ingredient
+                    ingredient_quantity.recipe = recipe
+                    ingredient_quantity.save()
+
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            log.error("Tags Table has some error...")
+            return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
+
         # finally build full object
 
         recipe.save()
         log.info("Finished POST /recipe/list")
         return Response(status=201)
+
+
+def normalize_quantity(quantity_original):
+
+    if 'g' in quantity_original:
+        return float(quantity_original.replace('g','').strip())
+
+    if 'gr' in quantity_original:
+        return float(quantity_original.replace('g','').strip())
+
+    if 'c. de chá' in  quantity_original:
+        quantity_helper = quantity_original.replace('c. de chá', '')
+        total = float(0)
+        if "½" in quantity_helper:
+            total =  0.5 * COLHER_DE_CHA
+            quantity_helper = quantity_helper.replace("½", '')
+        try:
+            total = total + float(quantity_helper.strip()) * COLHER_DE_CHA
+        except:
+            # Se o quantity_helper não der para ser parsed
+            log.debug(f"Quantity_helper was unable to be parsed {quantity_helper.strip()}")
+            pass
+
+        return total
 
 
 @api.route("")
@@ -267,7 +307,6 @@ class RecipeResource(Resource):
         # fills recipe object
         recipe = RecipeDB(**recipe_validated)
         recipe.preparation = str(preparation).encode()
-        recipe.ingredients = str(ingredients).encode()
         # use .decode() to decode
         recipe.save()
 
@@ -312,6 +351,30 @@ class RecipeResource(Resource):
             recipe.delete_instance(recursive=True)
             log.error("Tags Table has some error...")
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
+
+        # build multi to multi relation to Ingredient Quantity
+        recipe.save()
+        try:
+            if ingredients and ingredients != {}:
+                for i in ingredients:
+                    ingredient, created = IngredientBase.get_or_create(name=i['ingredient']['name'])
+                    if created:
+                        ingredient.save()
+                    if i['quantity_original']:
+                        try:
+                            quantity_normalized = normalize_quantity(i['quantity_original'])
+                        except Exception as e:
+                            quantity_normalized = float(0)
+                            log.error("Tags Table has some error...")
+                    ingredient_quantity = Ingredient(quantity_original=i['quantity_original'], quantity_normalized=quantity_normalized)
+                    ingredient_quantity.ingredient = ingredient
+                    ingredient_quantity.recipe = recipe
+                    ingredient_quantity.save()
+
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            log.error("Tags Table has some error...")
+            return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
 
         # finally build full object
 
@@ -464,6 +527,89 @@ class RecipeResource(Resource):
 
 
 """
+    Sorting
+"""
+
+
+@api.route("/list/background/sort")
+@api.doc("get_recipe_list", model=RecipeDB)
+class RecipeListBackgroundSortResource(Resource):
+
+    @api.expect(parser)
+    def get(self):
+        """List recipes by string search and all"""
+        # logging
+        log.info("GET /recipe/list")
+
+        # Get args
+        args = parser.parse_args()
+
+        page = int(args['page']) if args['page'] else 1
+        page_size = int(args['page_size']) if args['page_size'] else 5
+        by = f"'{str(args['by'])}'" if args['by'] and args['by'] in [RECIPES_BACKGROUND_TYPE_LIKED,
+                                                                     RECIPES_BACKGROUND_TYPE_SAVED,
+                                                                     RECIPES_BACKGROUND_TYPE_CREATED] else None
+
+        # validate args
+
+        if not by:
+            return Response(status=400, response="Parameter by is invalid.")
+        if page <= 0:
+            return Response(status=400, response="page cant be negative")
+        if page_size not in [5, 10, 20, 40]:
+            return Response(status=400, response="page_size not in [5, 10, 20, 40]")
+
+        # declare response holder
+
+        response_holder = {}
+
+        # query building
+
+        # Pesquisa por String
+        if args['string']:
+            query = (RecipeDB
+                     .select(RecipeDB, peewee.fn.COUNT(peewee.Case(RecipeBackground.type, [(peewee.SQL(by), 1)]))
+                             .alias('like_count'))
+                     .distinct()
+                     .join(RecipeBackground, peewee.JOIN.LEFT_OUTER)
+                     .switch(RecipeDB)
+                     .join(RecipeTagThroughDB).join(TagDB)
+                     .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string']))
+                     .group_by(RecipeDB.id, RecipeDB.title)
+                     .order_by(peewee.SQL('like_count').desc()))
+
+
+        else:
+
+            query = (RecipeDB
+                     .select(RecipeDB, peewee.fn.COUNT(peewee.Case(RecipeBackground.type, [(peewee.SQL(by), 1)]))
+                             .alias('like_count'))
+                     .distinct()
+                     .join(RecipeBackground, peewee.JOIN.LEFT_OUTER)
+                     .group_by(RecipeDB.id, RecipeDB.title)
+                     .order_by(peewee.SQL('like_count').desc()))
+
+        # metadata
+
+        total_recipes = int(query.count())
+        total_pages = math.ceil(total_recipes / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
+        response_holder["_metadata"] = metadata
+
+        # response data
+
+        recipes = []
+        for recipe in query.paginate(page, page_size):
+            recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
+            recipe_schema = RecipeSchema().dump(recipe_model)
+            recipes.append(recipe_schema)
+
+        response_holder["result"] = recipes
+        log.info("Finished GET /recipe/list")
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+
+
+"""
     Functionality
 """
 
@@ -524,8 +670,6 @@ class RecipeLikeResource(Resource):
 
         # add like
 
-        recipe_to_be_liked
-
         recipe_background, created = RecipeBackgroundDB.get_or_create(user=user, recipe=recipe_to_be_liked,
                                                                       type=RECIPES_BACKGROUND_TYPE_LIKED)
 
@@ -582,7 +726,7 @@ class RecipeLikeResource(Resource):
         query = RecipeBackgroundDB.delete() \
             .where(
             ((RecipeBackgroundDB.recipe == like_to_be_deleted_id) & (RecipeBackgroundDB.user == user_id)) & (
-                        RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_LIKED)).execute()
+                    RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_LIKED)).execute()
 
         if query != 1:
             log.error("User does not like this recipe.")
@@ -761,8 +905,6 @@ class RecipeSaveResource(Resource):
             .where(
             ((RecipeBackgroundDB.recipe == like_to_be_deleted_id) & (RecipeBackgroundDB.user == user_id)) & (
                     RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_SAVED)).execute()
-
-
 
         log.info("Finished DELETE /save")
         return Response(status=204)

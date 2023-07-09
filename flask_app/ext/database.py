@@ -3,6 +3,8 @@ import os
 from peewee import MySQLDatabase
 
 from flask_app.models.model_auth import TokenBlocklist
+from flask_app.models.model_ingredient import IngredientBase
+from flask_app.models.model_ingredient_quantity import Ingredient
 from flask_app.models.model_user import User
 from flask_app.models.model_recipe import Recipe
 from flask_app.models.model_recipe_background import RecipeBackground
@@ -24,7 +26,7 @@ class ReconectMySQLDatabase(ReconnectMixin,MySQLDatabase):
 db = ReconectMySQLDatabase(database=database, user=user, password=password,
                    host=host)
 
-models = [TokenBlocklist, NutritionInformation, Recipe, RecipeBackground, Tag, User, RecipeTagThrough, Comment, Follow]
+models = [TokenBlocklist, NutritionInformation, Recipe, RecipeBackground, Tag, User, RecipeTagThrough, Comment, Follow, IngredientBase, Ingredient]
 
 class Database(object):
 

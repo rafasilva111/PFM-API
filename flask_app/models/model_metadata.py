@@ -20,12 +20,12 @@ def build_metadata(page, page_size, total_pages, total_units, ENDPOINT):
 
     if page < total_pages:
         next_link = page + 1
-        _metadata['next'] = f"/api/v1/{ENDPOINT}?page={next_link}&page_size={page_size}"
+        _metadata['next'] = f"/api/v1{ENDPOINT}?page={next_link}&page_size={page_size}"
     else:
         _metadata.pop('next')
     if page > 1:
         previous_link = page - 1
-        _metadata['previous'] = f"/api/v1/{ENDPOINT}?page={previous_link}&page_size={page_size}"
+        _metadata['previous'] = f"/api/v1{ENDPOINT}?page={previous_link}&page_size={page_size}"
     else:
         _metadata.pop('previous')
     _metadata['current_page'] = page

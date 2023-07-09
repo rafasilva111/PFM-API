@@ -10,7 +10,6 @@ from flask_app.models.model_recipe import Recipe
 from flask_app.models.model_user import User
 
 
-
 # Database
 
 class RecipeBackground(BaseModel):
@@ -20,6 +19,8 @@ class RecipeBackground(BaseModel):
 
     class Meta:
         db_table = 'recipe_background'
+
+
 
 
 # Schema

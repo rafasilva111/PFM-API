@@ -198,12 +198,15 @@ class UserResource(Resource):
         try:
             for key, value in user_validated.items():
                     setattr(user_making_patch, key, value)
+            import pytz  # $ pip install pytz
 
-            user_making_patch.updated_date = datetime.utcnow()
+
+            user_making_patch.updated_date = datetime.now(timezone.utc)
             user_making_patch.save()
 
+
             log.info("Finished PATCH /user")
-            return Response(status=200,response=json.dumps(UserSchema().dump(user_making_patch)), mimetype="application/json")
+            return Response(status=200,response=json.dumps(UserSchema().dump(model_to_dict(user_making_patch, backrefs=True, recurse=True, manytomany=True))), mimetype="application/json")
         except Exception as e:
             log.error(return_error_sql(e))
             return return_error_sql(e)
