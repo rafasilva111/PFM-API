@@ -48,14 +48,14 @@ class CommentsListResource(Resource):
 
         recipe_id = args['recipe_id']
         page = int(args['page']) if args['page'] else 1
-        page_size = int(args['page_size']) if args['page_size'] else 5
+        page_size = int(args['page_size']) if args['page_size'] else 20
 
         # validate args
 
         if page <= 0:
             log.info("page cant be negative")
             return Response(status=400, response="page cant be negative")
-        if page_size not in [5, 10, 20, 40]:
+        if page_size not in [5, 10, 20, 40, 100]:
             log.info("page_size not in [5, 10, 20, 40]")
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
@@ -69,7 +69,7 @@ class CommentsListResource(Resource):
 
             # build query
 
-            query = CommentDB.select().where(CommentDB.recipe == recipe_id)
+            query = CommentDB.select().where(CommentDB.recipe == recipe_id).order_by(CommentDB.created_date.desc())
 
             # metadata
 
@@ -172,6 +172,8 @@ class CommentResource(Resource):
 
         # Validate args by loading it into schema
 
+
+
         try:
             comment_validated = CommentSchema().load(json_data)
         except ValidationError as err:
@@ -206,8 +208,11 @@ class CommentResource(Resource):
         comment.user = user
         comment.save()
 
+        comment_schema = CommentSchema().dump(model_to_dict(comment))
+        comment_json = json.dumps(comment_schema)
+
         log.info("Finished POST /comment")
-        return Response(status=201)
+        return Response(status=201,response=comment_json, mimetype="application/json")
 
     @jwt_required()
     def patch(self):

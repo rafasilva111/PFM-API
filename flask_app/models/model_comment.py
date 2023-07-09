@@ -6,7 +6,7 @@ from flask_app.ext.schema import ma
 from flask_app.models.model_recipe import Recipe, RecipeSchema,RecipeSimpleSchema
 from flask_app.models.model_user import User, UserSchema
 from flask_app.models.base_model import BaseModel
-from marshmallow import fields, pre_dump
+from marshmallow import fields, pre_dump, EXCLUDE
 
 
 # Database
@@ -15,8 +15,8 @@ class Comment(BaseModel):
     text = CharField(null=False)
     recipe = ForeignKeyField(Recipe, backref='comments')
     user = ForeignKeyField(User, backref='comments')
-    created_date =  DateTimeField(default=datetime.now(), null=False)
-    updated_date = DateTimeField(default=datetime.now(), null=False)
+    created_date = DateTimeField(default=datetime.now, null=False)
+    updated_date = DateTimeField(default=datetime.now, null=False)
 
 # Schema
 
@@ -32,6 +32,8 @@ class CommentSchema(ma.Schema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
+
 
     @pre_dump
     def prepare_user_and_recipe(self, data, **kwargs):

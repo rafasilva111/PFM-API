@@ -10,6 +10,8 @@ from marshmallow import ValidationError
 from playhouse.shortcuts import model_to_dict
 
 from ...models import TokenBlocklist
+from ...models.model_ingredient import IngredientBase
+from ...models.model_ingredient_quantity import Ingredient
 from ...models.model_metadata import MetadataSchema, build_metadata
 from ...models.model_recipe import Recipe as RecipeDB, RecipeSchema, RECIPES_BACKGROUND_TYPE_CREATED, \
     RECIPES_BACKGROUND_TYPE_LIKED, RECIPES_BACKGROUND_TYPE_SAVED
@@ -31,9 +33,14 @@ parser.add_argument('page_size', type=int, help='The page size.')
 parser.add_argument('id', type=int, help='The recipe id to be search.')
 parser.add_argument('string', type=str, help='The string to be search.')
 parser.add_argument('user_id', type=int, help='The user id to be search.')
+parser.add_argument('by', type=str, help='Type of background sort type.')
 
 ENDPOINT = "/recipe"
 
+## Measuring constants
+COLHER_DE_CHA = 4
+
+RECIPES_SORT_DATE = "DATE"
 
 # TODO get recipes by user?
 
@@ -54,6 +61,7 @@ class RecipeListResource(Resource):
         user_id = args['user_id']  # todo falta procura por user_id
         page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
+        by = str(args['by']) if args['by'] and args['by'] in [RECIPES_SORT_DATE] else RECIPES_SORT_DATE
 
         # validate args
 
@@ -68,15 +76,28 @@ class RecipeListResource(Resource):
 
         # query building
 
-        # Pesquisa por String
+        # Check if sorted
 
-        if args['string']:
+        # Check if sorted by date
+        if args['by'] == RECIPES_SORT_DATE:
+            # Pesquisa por String
+            if args['string']:
 
-            query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
-                .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string']))
+                query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
+                    .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string'])) \
+                    .order_by(RecipeDB.created_date)
+            else:
+
+                query = RecipeDB.select().order_by(RecipeDB.created_date)
         else:
+            # Pesquisa por String
+            if args['string']:
 
-            query = RecipeDB.select()
+                query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
+                    .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string']))
+            else:
+
+                query = RecipeDB.select()
 
         # metadata
 
@@ -121,7 +142,6 @@ class RecipeListResource(Resource):
         # fills recipe object
         recipe = RecipeDB(**recipe_validated)
         recipe.preparation = str(preparation).encode()
-        recipe.ingredients = str(ingredients).encode()
         # use .decode() to decode
         recipe.save()
 
@@ -153,11 +173,59 @@ class RecipeListResource(Resource):
             recipe.delete_instance(recursive=True)
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
+        # build multi to multi relation to Ingredient Quantity
+        recipe.save()
+        try:
+            if ingredients and ingredients != {}:
+                for i in ingredients:
+                    ingredient, created = IngredientBase.get_or_create(name=i['name'])
+                    if created:
+                        ingredient.save()
+                    if i['quantity_original']:
+                        try:
+                            quantity_normalized = normalize_quantity(i['quantity_original'])
+                        except Exception as e:
+                            quantity_normalized = float(0)
+                            log.error("Tags Table has some error...")
+                    ingredient_quantity = Ingredient(quantity_original=i['quantity_original'], quantity_normalized=quantity_normalized)
+                    ingredient_quantity.ingredient = ingredient
+                    ingredient_quantity.recipe = recipe
+                    ingredient_quantity.save()
+
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            log.error("Tags Table has some error...")
+            return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
+
         # finally build full object
 
         recipe.save()
         log.info("Finished POST /recipe/list")
         return Response(status=201)
+
+
+def normalize_quantity(quantity_original):
+
+    if 'g' in quantity_original:
+        return float(quantity_original.replace('g','').strip())
+
+    if 'gr' in quantity_original:
+        return float(quantity_original.replace('g','').strip())
+
+    if 'c. de chá' in  quantity_original:
+        quantity_helper = quantity_original.replace('c. de chá', '')
+        total = float(0)
+        if "½" in quantity_helper:
+            total =  0.5 * COLHER_DE_CHA
+            quantity_helper = quantity_helper.replace("½", '')
+        try:
+            total = total + float(quantity_helper.strip()) * COLHER_DE_CHA
+        except:
+            # Se o quantity_helper não der para ser parsed
+            log.debug(f"Quantity_helper was unable to be parsed {quantity_helper.strip()}")
+            pass
+
+        return total
 
 
 @api.route("")
@@ -239,7 +307,6 @@ class RecipeResource(Resource):
         # fills recipe object
         recipe = RecipeDB(**recipe_validated)
         recipe.preparation = str(preparation).encode()
-        recipe.ingredients = str(ingredients).encode()
         # use .decode() to decode
         recipe.save()
 
@@ -284,6 +351,30 @@ class RecipeResource(Resource):
             recipe.delete_instance(recursive=True)
             log.error("Tags Table has some error...")
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
+
+        # build multi to multi relation to Ingredient Quantity
+        recipe.save()
+        try:
+            if ingredients and ingredients != {}:
+                for i in ingredients:
+                    ingredient, created = IngredientBase.get_or_create(name=i['ingredient']['name'])
+                    if created:
+                        ingredient.save()
+                    if i['quantity_original']:
+                        try:
+                            quantity_normalized = normalize_quantity(i['quantity_original'])
+                        except Exception as e:
+                            quantity_normalized = float(0)
+                            log.error("Tags Table has some error...")
+                    ingredient_quantity = Ingredient(quantity_original=i['quantity_original'], quantity_normalized=quantity_normalized)
+                    ingredient_quantity.ingredient = ingredient
+                    ingredient_quantity.recipe = recipe
+                    ingredient_quantity.save()
+
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            log.error("Tags Table has some error...")
+            return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
 
         # finally build full object
 
@@ -439,12 +530,10 @@ class RecipeResource(Resource):
     Sorting
 """
 
-parser.add_argument('by', type=str, help='Type of background sort type.')
-
 
 @api.route("/list/background/sort")
 @api.doc("get_recipe_list", model=RecipeDB)
-class RecipeListResource(Resource):
+class RecipeListBackgroundSortResource(Resource):
 
     @api.expect(parser)
     def get(self):

@@ -28,7 +28,6 @@ class Recipe(BaseModel):
     time = CharField(null=True)
 
     views = IntegerField(default=0, null=False)
-    ingredients = BlobField(null=False)
     preparation = BlobField(null=False)
 
     source_rating = FloatField(null=True)
@@ -44,10 +43,16 @@ class Recipe(BaseModel):
 def get_recipe_schema():
     return RecipeSchema
 
-
 class IngredientSchema(ma.Schema):
+    id = fields.Integer(dump_only=True)
     name = fields.String(required=True)
-    quantity = fields.String(required=True)
+
+
+class IngredientQuantitySchema(ma.Schema):
+    id = fields.Integer(dump_only=True)
+    ingredient = fields.Nested(IngredientSchema, required=True)
+    quantity_original = fields.String(required=True)
+    quantity_normalized = fields.Float(required=False,default=None)
 
 
 class PreparationSchema(ma.Schema):
@@ -74,7 +79,7 @@ class RecipeSchema(ma.Schema):
     views = fields.Integer(default=0, required=False)
     comments = fields.Integer(default=0, required=False)
 
-    ingredients = fields.Nested(IngredientSchema, required=True, many=True)
+    ingredients = fields.Nested(IngredientQuantitySchema, required=True, many=True)
     preparation = fields.Nested(PreparationSchema, required=True, many=True)
     nutrition_informations = fields.Dict(required=True)
     backgrounds = fields.List(fields.Dict(), required=True, dump_only=True)
@@ -92,8 +97,6 @@ class RecipeSchema(ma.Schema):
 
     @pre_dump
     def decode_blobs(self, data, **kwargs):
-        if 'ingredients' in data:
-            data['ingredients'] = json.loads(data['ingredients'].decode().replace("\'", "\""))
         if 'preparation' in data:
             data['preparation'] = json.loads(data['preparation'].decode().replace("\'", "\""))
         return data
