@@ -5,18 +5,19 @@ from marshmallow import fields, pre_load, pre_dump
 from peewee import CharField, DateTimeField, IntegerField, FloatField, ManyToManyField
 from playhouse.postgres_ext import *
 
+
 from flask_app.ext.schema import ma
+
 from flask_app.models.base_model import BaseModel
+
 
 # Database
 from flask_app.models.model_metadata import MetadataSchema
 
-
-
-
 RECIPES_BACKGROUND_TYPE_LIKED = "LIKED"
 RECIPES_BACKGROUND_TYPE_SAVED = "SAVED"
 RECIPES_BACKGROUND_TYPE_CREATED = "CREATED"
+
 
 class Recipe(BaseModel):
     title = CharField(null=False)
@@ -43,6 +44,7 @@ class Recipe(BaseModel):
 def get_recipe_schema():
     return RecipeSchema
 
+
 class IngredientSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     name = fields.String(required=True)
@@ -52,7 +54,7 @@ class IngredientQuantitySchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     ingredient = fields.Nested(IngredientSchema, required=True)
     quantity_original = fields.String(required=True)
-    quantity_normalized = fields.Float(required=False,default=None)
+    quantity_normalized = fields.Float(required=False, default=None)
 
 
 class PreparationSchema(ma.Schema):
@@ -111,7 +113,8 @@ class RecipeSchema(ma.Schema):
                 background['user'] = background['user']['first_name'] + " " + background['user']['last_name']
 
         from flask_app.models import RecipeBackground
-        data['likes'] = RecipeBackground.select().where((RecipeBackground.recipe == data['id']) & (RecipeBackground.type == RECIPES_BACKGROUND_TYPE_LIKED)).count()
+        data['likes'] = RecipeBackground.select().where(
+            (RecipeBackground.recipe == data['id']) & (RecipeBackground.type == RECIPES_BACKGROUND_TYPE_LIKED)).count()
         if 'tags' in data:
             data['tags'] = [a['title'] for a in data['tags']]
         if 'comments' in data and data['comments'] != []:
@@ -135,6 +138,7 @@ class RecipeSchema(ma.Schema):
     #         data['comments_count'] = len(data['comments'])
     #
     #     return data
+
 
 class RecipeSimpleSchema(ma.Schema):
     id = fields.Integer(dump_only=True)

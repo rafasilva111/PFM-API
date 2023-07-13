@@ -14,7 +14,7 @@ from flask_app.models.base_model import BaseModel
 from flask_app.models.model_recipe import RecipeSchema, RECIPES_BACKGROUND_TYPE_LIKED, RECIPES_BACKGROUND_TYPE_SAVED, \
     RECIPES_BACKGROUND_TYPE_CREATED
 
-USER_TYPE = {"NORMAL", "VIP", "ADMIN"}
+USER_TYPE = {"N", "C", "V", "A"}  # (normal, company, vip, admin)
 PROFILE_TYPE = {"PUBLIC", "PRIVATE"}
 SEXES = {"M", "F", "NA"}
 
@@ -23,15 +23,14 @@ SEXES = {"M", "F", "NA"}
 
 class User(BaseModel):
     # __tablename__ = "user"
-    first_name = CharField(null=False)
-    last_name = CharField(null=False)
+    name = CharField(null=False)
     birth_date = DateTimeField(null=False)
     email = CharField(unique=True, null=False)
     password = CharField(null=False)
 
     profile_type = CharField(default="private")  # (protect, private, public)
     verified = BooleanField(default=False)
-    user_type = CharField(default="N")  # (normal, vip, admin)
+    user_type = CharField(default="N")  # (normal, company, vip, admin)
     img_source = CharField(null=True)
 
     activity_level = FloatField(null=True)
@@ -48,6 +47,7 @@ class User(BaseModel):
 
     def check_password(self, password):
         return check_password_hash(self.password, password)
+
 
 # Schemas
 
@@ -73,11 +73,11 @@ class UserSchema(ma.Schema):
     weight = fields.Float(default=-1)
     age = fields.Integer(dump_only=True)
 
-    liked_recipes = fields.Nested(RecipeSchema, many=True,dump_only=True)
-    saved_recipes = fields.Nested(RecipeSchema, many=True,dump_only=True)
-    created_recipes = fields.Nested(RecipeSchema, many=True,dump_only=True)
+    liked_recipes = fields.Nested(RecipeSchema, many=True, dump_only=True)
+    saved_recipes = fields.Nested(RecipeSchema, many=True, dump_only=True)
+    created_recipes = fields.Nested(RecipeSchema, many=True, dump_only=True)
     # todo apply this to schema like previous ones
-    commented_recipes = fields.Nested(RecipeSchema, many=True,dump_only=True)
+    commented_recipes = fields.Nested(RecipeSchema, many=True, dump_only=True)
 
     created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
     updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
@@ -115,6 +115,7 @@ class UserSchema(ma.Schema):
 
         return data
 
+
 class UserPatchSchema(ma.Schema):
     first_name = fields.String(required=False)
     last_name = fields.String(required=False)
@@ -125,10 +126,11 @@ class UserPatchSchema(ma.Schema):
     weight = fields.Float(required=False)
     age = fields.Integer(dump_only=False, required=False)
     updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
-    #patch by admin
+    # patch by admin
     profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE, required=False)
     verified = fields.Boolean(required=False)
     user_type = fields.String(validate=lambda x: x in USER_TYPE, required=False)
+
     @pre_load
     def hash_password(self, data, **kwargs):
         if 'password' in data:

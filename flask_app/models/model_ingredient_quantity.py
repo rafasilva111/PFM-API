@@ -10,11 +10,11 @@ from flask_app.models import Recipe
 from flask_app.models.base_model import BaseModel
 
 # Database
-from flask_app.models.model_ingredient import IngredientBase
+from flask_app.models.model_ingredient import Ingredient
 
 
-class Ingredient(BaseModel):
-    ingredient = ForeignKeyField(IngredientBase, backref="ingredient_base")
+class IngredientQuantity(BaseModel):
+    ingredient = ForeignKeyField(Ingredient, backref="ingredient_base")
     recipe = ForeignKeyField(Recipe, backref="ingredients")
     quantity_original = CharField(null=False)
     quantity_normalized = FloatField(null=True)

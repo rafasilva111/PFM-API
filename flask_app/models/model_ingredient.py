@@ -12,7 +12,7 @@ from flask_app.models.base_model import BaseModel
 from flask_app.models.model_metadata import MetadataSchema
 
 
-class IngredientBase(BaseModel):
+class Ingredient(BaseModel):
     name = CharField(null=False,unique=True)
 
 

@@ -109,6 +109,7 @@ class UserListResource(Resource):
             log.info("Finished GET /user/list")
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
+
 @api.route("")
 class UserResource(Resource):
 
@@ -133,7 +134,6 @@ class UserResource(Resource):
         except peewee.DoesNotExist:
             log.error("User couldn't be found by this id.")
             return Response(status=400, response="User couldn't be found by this id.")
-
 
     @jwt_required()
     def delete(self):
@@ -162,7 +162,6 @@ class UserResource(Resource):
         except peewee.IntegrityError as e:
             log.error(return_error_sql(e))
             return Response(status=400, response=return_error_sql(e))
-
 
     @jwt_required()
     def patch(self):
@@ -197,18 +196,16 @@ class UserResource(Resource):
 
         try:
             for key, value in user_validated.items():
-                    setattr(user_making_patch, key, value)
+                setattr(user_making_patch, key, value)
             import pytz  # $ pip install pytz
-
 
             user_making_patch.updated_date = datetime.now(timezone.utc)
             user_making_patch.save()
 
-
             log.info("Finished PATCH /user")
-            return Response(status=200,response=json.dumps(UserSchema().dump(model_to_dict(user_making_patch, backrefs=True, recurse=True, manytomany=True))), mimetype="application/json")
+            return Response(status=200, response=json.dumps(
+                UserSchema().dump(model_to_dict(user_making_patch, backrefs=True, recurse=True, manytomany=True))),
+                            mimetype="application/json")
         except Exception as e:
             log.error(return_error_sql(e))
             return return_error_sql(e)
-
-
