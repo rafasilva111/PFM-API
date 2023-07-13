@@ -1,25 +1,17 @@
-import json
 import math
-from datetime import datetime, timezone
+from datetime import timezone
 
 import peewee
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from flask_restx import Namespace, Resource, fields, abort, reqparse
 from flask import Response, request
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
 from playhouse.shortcuts import model_to_dict
 
-from ...models import TokenBlocklist
-from ...models.model_ingredient import IngredientBase
-from ...models.model_ingredient_quantity import Ingredient
-from ...models.model_metadata import MetadataSchema, build_metadata
-from ...models.model_recipe import Recipe as RecipeDB, RecipeSchema, RECIPES_BACKGROUND_TYPE_CREATED, \
-    RECIPES_BACKGROUND_TYPE_LIKED, RECIPES_BACKGROUND_TYPE_SAVED
-from ...models.model_tag import Tag as TagDB, RecipeTagThrough as RecipeTagThroughDB
-from ...models.model_user import User as UserDB
-from ...models.model_recipe_background import RecipeBackground as RecipeBackgroundDB, RecipeBackground
-from ...models.model_nutrition_information import NutritionInformation as NutritionInformationDB
-from .errors import return_error_sql, school_no_exists
+from ...classes.models import Recipe as RecipeDB, \
+    RecipeTagThrough as RecipeTagThroughDB, Tag as TagDB, User as UserDB, RecipeBackground as RecipeBackgroundDB, \
+    NutritionInformation as NutritionInformationDB
+from ...classes.schemas import *
 from ...ext.logger import log
 
 # Create name space
@@ -41,6 +33,7 @@ ENDPOINT = "/recipe"
 COLHER_DE_CHA = 4
 
 RECIPES_SORT_DATE = "DATE"
+
 
 # TODO get recipes by user?
 
@@ -178,7 +171,7 @@ class RecipeListResource(Resource):
         try:
             if ingredients and ingredients != {}:
                 for i in ingredients:
-                    ingredient, created = IngredientBase.get_or_create(name=i['name'])
+                    ingredient, created = IngredientQuantity.get_or_create(name=i['name'])
                     if created:
                         ingredient.save()
                     if i['quantity_original']:
@@ -187,7 +180,8 @@ class RecipeListResource(Resource):
                         except Exception as e:
                             quantity_normalized = float(0)
                             log.error("Tags Table has some error...")
-                    ingredient_quantity = Ingredient(quantity_original=i['quantity_original'], quantity_normalized=quantity_normalized)
+                    ingredient_quantity = Ingredient(quantity_original=i['quantity_original'],
+                                                     quantity_normalized=quantity_normalized)
                     ingredient_quantity.ingredient = ingredient
                     ingredient_quantity.recipe = recipe
                     ingredient_quantity.save()
@@ -205,18 +199,17 @@ class RecipeListResource(Resource):
 
 
 def normalize_quantity(quantity_original):
-
     if 'g' in quantity_original:
-        return float(quantity_original.replace('g','').strip())
+        return float(quantity_original.replace('g', '').strip())
 
     if 'gr' in quantity_original:
-        return float(quantity_original.replace('g','').strip())
+        return float(quantity_original.replace('g', '').strip())
 
-    if 'c. de chá' in  quantity_original:
+    if 'c. de chá' in quantity_original:
         quantity_helper = quantity_original.replace('c. de chá', '')
         total = float(0)
         if "½" in quantity_helper:
-            total =  0.5 * COLHER_DE_CHA
+            total = 0.5 * COLHER_DE_CHA
             quantity_helper = quantity_helper.replace("½", '')
         try:
             total = total + float(quantity_helper.strip()) * COLHER_DE_CHA
@@ -299,7 +292,7 @@ class RecipeResource(Resource):
 
         # Change get or create needed objects
         # removing because the must be transformed before entity building
-        nutrition_table = recipe_validated.pop('nutrition_informations')
+        nutrition_table = recipe_validated.pop('nutrional_table')
         preparation = recipe_validated.pop('preparation')
         ingredients = recipe_validated.pop('ingredients')
         tags = recipe_validated.pop('tags')
@@ -308,21 +301,26 @@ class RecipeResource(Resource):
         recipe = RecipeDB(**recipe_validated)
         recipe.preparation = str(preparation).encode()
         # use .decode() to decode
-        recipe.save()
+
+        # set created by user
+        recipe.created_by = user
 
         # build relation to nutrition_table
 
         try:
             if nutrition_table and nutrition_table != {}:
                 nutrition_information = NutritionInformationDB(**nutrition_table)
-                nutrition_information.recipe = recipe
                 nutrition_information.save()
-                recipe.nutrition_informations = nutrition_information
+                recipe.nutrional_table = nutrition_information
 
         except Exception as e:
             recipe.delete_instance(recursive=True)
             log.error("Nutrition Table has some error...")
             return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
+
+        ## recipe needs to be saved after foreign key's but before multiple to multiple relations
+        # because to build these last one recipe needs to already have an id, wich is done by save()
+        recipe.save()
 
         # build relation to recipe_background
 
@@ -353,20 +351,23 @@ class RecipeResource(Resource):
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
         # build multi to multi relation to Ingredient Quantity
-        recipe.save()
         try:
             if ingredients and ingredients != {}:
                 for i in ingredients:
-                    ingredient, created = IngredientBase.get_or_create(name=i['ingredient']['name'])
+                    ingredient, created = Ingredient.get_or_create(name=i['ingredient']['name'])
+                    quantity_normalized = float(0)
                     if created:
                         ingredient.save()
                     if i['quantity_original']:
                         try:
                             quantity_normalized = normalize_quantity(i['quantity_original'])
                         except Exception as e:
-                            quantity_normalized = float(0)
+                            recipe.delete_instance(recursive=True)
                             log.error("Tags Table has some error...")
-                    ingredient_quantity = Ingredient(quantity_original=i['quantity_original'], quantity_normalized=quantity_normalized)
+                            return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
+
+                    ingredient_quantity = IngredientQuantity(quantity_original=i['quantity_original'],
+                                                             quantity_normalized=quantity_normalized)
                     ingredient_quantity.ingredient = ingredient
                     ingredient_quantity.recipe = recipe
                     ingredient_quantity.save()

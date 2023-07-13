@@ -3,20 +3,14 @@ import math
 from datetime import datetime, timezone, timedelta
 
 import peewee
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from flask_restx import Namespace, Resource, fields, reqparse
 from flask import Response, request
-from playhouse.shortcuts import model_to_dict
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
+from playhouse.shortcuts import model_to_dict
 
-from flask_app.ext.database import db
-from .errors import return_error_sql, student_no_exists
-from ...models import TokenBlocklist
-from ...models.model_metadata import build_metadata
-
-from ...models.model_user import User as UserDB, UserSchema
-from ...models.model_recipe import Recipe as RecipeDB, RecipeSchema
-from ...models.model_comment import Comment as CommentDB, CommentSchema
+from ...classes.models import TokenBlocklist, Comment as CommentDB, Recipe as RecipeDB, User as UserDB
+from ...classes.schemas import CommentSchema, build_metadata
 from ...ext.logger import log
 
 # Create name space
@@ -114,6 +108,7 @@ class CommentsListResource(Resource):
             log.info("Finished GET /comment/list")
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
+
 @api.route("")
 class CommentResource(Resource):
 
@@ -172,8 +167,6 @@ class CommentResource(Resource):
 
         # Validate args by loading it into schema
 
-
-
         try:
             comment_validated = CommentSchema().load(json_data)
         except ValidationError as err:
@@ -212,7 +205,7 @@ class CommentResource(Resource):
         comment_json = json.dumps(comment_schema)
 
         log.info("Finished POST /comment")
-        return Response(status=201,response=comment_json, mimetype="application/json")
+        return Response(status=201, response=comment_json, mimetype="application/json")
 
     @jwt_required()
     def patch(self):
@@ -339,4 +332,3 @@ class CommentResource(Resource):
         else:
             log.error("You are not authorized to delete this comment.")
             return Response(status=400, response="You are not authorized to delete this comment.")
-

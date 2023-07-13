@@ -1,16 +1,16 @@
 import json
 import math
 from datetime import datetime, timezone
+
 import peewee
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from flask_restx import Namespace, Resource, fields, reqparse
 from flask import Response, request
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask_restx import Namespace, Resource
 from playhouse.shortcuts import model_to_dict
-from flask_app.ext.database import db
-from .errors import return_error_sql, student_no_exists
-from ...models import TokenBlocklist
-from ...models.model_metadata import build_metadata
-from ...models.model_user import User as UserDB, UserSchema, UserPatchSchema
+
+from .errors import return_error_sql
+from ...classes.models import User as UserDB
+from ...classes.schemas import *
 from ...ext.logger import log
 
 # Create name space

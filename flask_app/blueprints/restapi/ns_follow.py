@@ -3,20 +3,13 @@ import math
 from datetime import datetime, timezone
 
 import peewee
+from flask import Response
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from flask_restx import Namespace, Resource, fields, reqparse
-from flask import Response, request
+from flask_restx import Namespace, Resource
 from playhouse.shortcuts import model_to_dict
-from marshmallow import ValidationError
 
-from flask_app.ext.database import db
-from .errors import return_error_sql, student_no_exists
-from ...models import TokenBlocklist
-from ...models.model_metadata import build_metadata
-
-from ...models.model_user import User as UserDB, UserSchema
-from ...models.model_follow import Follow as FollowDB, FollowedsSchema, FollowersSchema
-from ...models.model_comment import Comment as CommentDB, CommentSchema
+from ...classes.models import TokenBlocklist,Comment as CommentDB,Follow as FollowDB,User as UserDB
+from ...classes.schemas import CommentSchema, FollowedsSchema, FollowersSchema,build_metadata
 from ...ext.logger import log
 
 # Create name space

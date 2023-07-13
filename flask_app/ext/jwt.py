@@ -3,7 +3,7 @@ from datetime import timedelta
 from flask_jwt_extended import JWTManager
 from peewee import DoesNotExist
 
-from flask_app.models import TokenBlocklist
+from flask_app.classes.models import TokenBlocklist
 
 ACCESS_EXPIRES = timedelta(hours=1)
 
