@@ -2,13 +2,12 @@ import json
 import re
 from flask_bcrypt import generate_password_hash
 from marshmallow import fields, validates, pre_dump, pre_load, EXCLUDE
-
+from enum import Enum
 from flask_app.ext.schema import ma
 
 from flask_app.classes.models import *
 
-USER_TYPE = {"N", "C", "V", "A"}  # (normal, company, vip, admin)
-PROFILE_TYPE = ["PUBLIC", "PRIVATE"]
+
 SEXES = {"M", "F", "NA"}
 
 # Schemas
@@ -82,14 +81,14 @@ class RecipeListSchema(ma.Schema):
     results = fields.List(fields.Nested(lambda: MetadataSchema()))
 
 
-class UserBackgroundSchema(ma.Schema):
+class UserSimpleSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     name = fields.String(required=True)
     email = fields.Email(required=True)
 
-    profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE)
+    profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE_SET)
     verified = fields.Boolean()
-    user_type = fields.String(validate=lambda x: x in USER_TYPE)
+    user_type = fields.String(validate=lambda x: x in USER_TYPE_SET)
     img_source = fields.String(default="")
 
     class Meta:
@@ -99,7 +98,7 @@ class UserBackgroundSchema(ma.Schema):
 
 class RecipeBackgroundSimplifiedSchema(ma.Schema):
     id = fields.Integer(required=True)
-    user = fields.Nested(UserBackgroundSchema, required=True)
+    user = fields.Nested(UserSimpleSchema, required=True)
     type = fields.String(required=True)
 
     class Meta:
@@ -107,7 +106,7 @@ class RecipeBackgroundSimplifiedSchema(ma.Schema):
 
 
 class NutritionInformationSchema(ma.Schema):
-    id = fields.Integer(required=True)
+    id = fields.Integer(dump_only=True)
     energia = fields.String(required=True)
     energia_perc = fields.String()
     gordura = fields.String(required=True)
@@ -223,9 +222,9 @@ class UserSchema(ma.Schema):
     email = fields.Email(required=True)
     password = fields.String(load_only=True)
 
-    profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE)
+    profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE_SET)
     verified = fields.Boolean()
-    user_type = fields.String(validate=lambda x: x in USER_TYPE)
+    user_type = fields.String(validate=lambda x: x in USER_TYPE_SET)
     img_source = fields.String(default="")
     activity_level = fields.Float(default=-1)
     height = fields.Float(default=-1)
@@ -287,9 +286,9 @@ class UserPatchSchema(ma.Schema):
     age = fields.Integer(dump_only=False, required=False)
     updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
     # patch by admin
-    profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE, required=False)
+    profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE_SET, required=False)
     verified = fields.Boolean(required=False)
-    user_type = fields.String(validate=lambda x: x in USER_TYPE, required=False)
+    user_type = fields.String(validate=lambda x: x in USER_TYPE_SET, required=False)
 
     @pre_load
     def hash_password(self, data, **kwargs):
@@ -327,7 +326,6 @@ class CommentSchema(ma.Schema):
     text = fields.String(required=True, null=False)
     user = fields.Dict(required=True, dump_only=True)
     recipe = fields.Dict(required=True, dump_only=True)
-
     created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
     updated_date = fields.DateTime(dump_only=False, format='%Y-%m-%dT%H:%M:%S+00:00')
 
@@ -343,6 +341,27 @@ class CommentSchema(ma.Schema):
             data['user'] = UserSchema().dump(data['user'])
         return data
 
+
+class CalendarEntrySchema(ma.Schema):
+    id = fields.Integer(dump_only=True)
+    user = fields.Dict(required=True,dump_only=True)
+    recipe = fields.Dict(required=True,dump_only=True)
+    tag = fields.String(validate=lambda x: x in CALENDER_ENTRY_TAG_SET,required=True, null=False)
+    created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
+    marked_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S+00:00',required=True)
+    checked_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S+00:00')
+
+    @pre_dump
+    def prepare_user_and_recipe(self, data, **kwargs):
+        if 'recipe' in data:
+            data['recipe'] = RecipeSimpleSchema().dump(data['recipe'])
+        if 'user' in data:
+            data['user'] = UserSimpleSchema().dump(data['user'])
+        return data
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
 
 ''' Miscellanius '''
 

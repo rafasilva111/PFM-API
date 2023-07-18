@@ -1,6 +1,8 @@
 import os
 from abc import ABC
 from datetime import datetime
+from enum import Enum
+
 from playhouse.shortcuts import ReconnectMixin
 
 from peewee import TextField, FloatField, CharField, DateTimeField, BooleanField, IntegerField, BlobField, \
@@ -26,6 +28,34 @@ db = ReconectMySQLDatabase(database=database, user=db_user, password=db_password
                            host=host)
 
 
+class USER_TYPE(Enum):
+    NORMAL = "N"
+    COMPANY = "C"
+    VIP = "V"
+    ADMIN = "A"  # (normal, company, vip, admin)
+
+
+USER_TYPE_SET = USER_TYPE._value2member_map_
+
+
+class CALENDER_ENTRY_TAG(Enum):
+    PEQUENO_ALMOÇO = "PEQUENO ALMOÇO"
+    LANCHE_DA_MANHA = "LANCHE DA MANHÃ"
+    ALMOÇO = "ALMOÇO"
+    LANCHE_DA_TARDE = "LANCHE DA TARDE"  # (normal, company, vip, admin)
+    JANTAR = "JANTAR"  # (normal, company, vip, admin)
+    CEIA = "CEIA"  # (normal, company, vip, admin)
+
+
+CALENDER_ENTRY_TAG_SET = CALENDER_ENTRY_TAG._value2member_map_
+
+class PROFILE_TYPE(Enum):
+    PUBLIC = "PUBLIC"
+    PRIVATE = "PRIVATE"
+
+PROFILE_TYPE_SET = PROFILE_TYPE._value2member_map_
+
+
 class BaseModel(Model):
     class Meta:
         database = db
@@ -44,12 +74,12 @@ class User(BaseModel):
     profile_type = CharField(default="PRIVATE")  # (protect, private, public)
     verified = BooleanField(default=False)
     user_type = CharField(default="N")  # (normal, company, vip, admin)
-    img_source = CharField(null=True)
+    img_source = CharField(default="")
 
-    activity_level = FloatField(null=True)
-    height = FloatField(null=True)
-    sex = CharField(null=True)
-    weight = FloatField(null=True)
+    activity_level = FloatField(default=-1)
+    height = FloatField(default=-1)
+    sex = CharField(default="NA")
+    weight = FloatField(default=-1)
     age = CharField(null=False)
 
     created_date = DateTimeField(default=datetime.now())
@@ -107,7 +137,6 @@ class Recipe(BaseModel):
 
     source_rating = FloatField(null=True)
     source_link = CharField(null=True)
-    company = CharField(null=True)
 
     created_date = DateTimeField(default=datetime.now(), null=False)
     updated_date = DateTimeField(default=datetime.now(), null=False)
@@ -150,6 +179,21 @@ class Comment(BaseModel):
     user = ForeignKeyField(User, backref='comments')
     created_date = DateTimeField(default=datetime.now, null=False)
     updated_date = DateTimeField(default=datetime.now, null=False)
+
+
+""" Calendar """
+
+
+class CalendarEntry(BaseModel):
+    recipe = ForeignKeyField(Recipe, backref='recipe')
+    user = ForeignKeyField(User, backref='user')
+    tag = CharField(null=False)  # Pequeno almoço, Lanche da manhã, Almoço, Lanche da tarde ,Jantar , Ceia
+    created_date = DateTimeField(default=datetime.now, null=False)
+    checked_date = DateTimeField(null=True)
+    checked_done = BooleanField(default=False)
+
+    class Meta:
+        db_table = 'calendar_entrys'
 
 
 ''' Miscellanius '''

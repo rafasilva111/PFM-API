@@ -120,6 +120,7 @@ class UserResource(Resource):
 
         # get args
         args = parser.parse_args()
+
         id = args['id']
 
         # Validate args

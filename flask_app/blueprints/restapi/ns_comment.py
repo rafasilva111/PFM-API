@@ -201,6 +201,8 @@ class CommentResource(Resource):
         comment.user = user
         comment.save()
 
+        # prepares object to be returned
+
         comment_schema = CommentSchema().dump(model_to_dict(comment))
         comment_json = json.dumps(comment_schema)
 
