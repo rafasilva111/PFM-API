@@ -5,7 +5,7 @@ import requests
 from flask import Blueprint, Response
 from flask_jwt_extended import jwt_required
 
-from flask_restful import reqparse, Resource
+from flask_restful import reqparse
 from bs4 import *
 
 ACTIVIDADE = {
@@ -26,6 +26,7 @@ class GENDER(Enum):
 CALENDER_FITNESS_SET = GENDER._value2member_map_
 
 
+fitness_blueprint = Blueprint('fitness', __name__, url_prefix="/api/v1/fitness")
 
 parser = reqparse.RequestParser()
 parser.add_argument('altura', location='args')
@@ -34,8 +35,6 @@ parser.add_argument('idade', location='args')
 parser.add_argument('genero', location='args')
 parser.add_argument('atividade', location='args')
 parser.add_argument('task', location='args')
-
-fitness_blueprint = Blueprint('fitness', __name__, url_prefix="/api/v1/fitness")
 
 """ Functions """
 

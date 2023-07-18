@@ -131,6 +131,7 @@ class RecipeSchema(ma.Schema):
     title = fields.String(required=True)
     description = fields.String(required=True)
     img_source = fields.String(required=False, default="")
+    verified = fields.Boolean(required=False)
 
     difficulty = fields.String(required=False)
     portion = fields.String(required=False)

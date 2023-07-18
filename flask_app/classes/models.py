@@ -124,6 +124,7 @@ class Recipe(BaseModel):
     title = CharField(null=False)
     description = CharField(null=False)
     img_source = CharField(null=True)
+    verified = BooleanField(default=False)
 
     difficulty = CharField(null=True)
     portion = CharField(null=True)
