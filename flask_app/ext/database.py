@@ -2,17 +2,8 @@ import os
 
 from peewee import MySQLDatabase
 
-from flask_app.models.model_auth import TokenBlocklist
-from flask_app.models.model_ingredient import IngredientBase
-from flask_app.models.model_ingredient_quantity import Ingredient
-from flask_app.models.model_user import User
-from flask_app.models.model_recipe import Recipe
-from flask_app.models.model_recipe_background import RecipeBackground
-from flask_app.models.model_nutrition_information import NutritionInformation
-from flask_app.models.model_tag import Tag, RecipeTagThrough
-from flask_app.models.model_comment import Comment
-from flask_app.models.model_follow import Follow
-from playhouse.shortcuts import  ReconnectMixin
+from flask_app.classes.models import *
+from playhouse.shortcuts import ReconnectMixin
 
 user = os.environ.get('MYSQL_ROOT') if os.environ.get('MYSQL_ROOT') else "root"
 password = os.environ.get('MYSQL_ROOT_PASSWORD') if os.environ.get('MYSQL_ROOT_PASSWORD') else ""
@@ -20,22 +11,25 @@ database = os.environ.get('MYSQL_DATABASE') if os.environ.get('MYSQL_DATABASE') 
 host = os.environ.get('MYSQL_HOST') if os.environ.get('MYSQL_HOST') else "localhost"
 
 
-class ReconectMySQLDatabase(ReconnectMixin,MySQLDatabase):
+class ReconectMySQLDatabase(ReconnectMixin, MySQLDatabase):
     pass
 
-db = ReconectMySQLDatabase(database=database, user=user, password=password,
-                   host=host)
 
-models = [TokenBlocklist, NutritionInformation, Recipe, RecipeBackground, Tag, User, RecipeTagThrough, Comment, Follow, IngredientBase, Ingredient]
+db = ReconectMySQLDatabase(database=database, user=user, password=password,
+                           host=host)
+
+models = [TokenBlocklist, NutritionInformation, Recipe, RecipeBackground, Tag, User, RecipeTagThrough, Comment, Follow,
+          Ingredient, IngredientQuantity,CalendarEntry]
+
 
 class Database(object):
 
-    def __init__(self,app):
+    def __init__(self, app):
         self.app = app
         self.db = db
         self.register_handlers()
 
-    def init_app(self,app):
+    def init_app(self, app):
         self.app = app
 
         return db
@@ -50,11 +44,9 @@ class Database(object):
         if self.db.is_closed():
             self.db.connect()
 
-
-    def close_db_(self,ext):
+    def close_db_(self, ext):
         if not db.is_closed():
             db.close()
-
 
     def register_handlers(self):
         # li em algum lugar que não era preciso abrir a connection vou deixar assim para exprimentar

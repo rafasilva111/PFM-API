@@ -1,25 +1,18 @@
-import json
 import math
-from datetime import datetime, timezone
+from datetime import timezone
 
 import peewee
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from flask_restx import Namespace, Resource, fields, abort, reqparse
 from flask import Response, request
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
 from playhouse.shortcuts import model_to_dict
 
-from ...models import TokenBlocklist
-from ...models.model_ingredient import IngredientBase
-from ...models.model_ingredient_quantity import Ingredient
-from ...models.model_metadata import MetadataSchema, build_metadata
-from ...models.model_recipe import Recipe as RecipeDB, RecipeSchema, RECIPES_BACKGROUND_TYPE_CREATED, \
-    RECIPES_BACKGROUND_TYPE_LIKED, RECIPES_BACKGROUND_TYPE_SAVED
-from ...models.model_tag import Tag as TagDB, RecipeTagThrough as RecipeTagThroughDB
-from ...models.model_user import User as UserDB
-from ...models.model_recipe_background import RecipeBackground as RecipeBackgroundDB, RecipeBackground
-from ...models.model_nutrition_information import NutritionInformation as NutritionInformationDB
-from .errors import return_error_sql, school_no_exists
+from .util.functions import normalize_quantity
+from ...classes.models import Recipe as RecipeDB, \
+    RecipeTagThrough as RecipeTagThroughDB, Tag as TagDB, User as UserDB, RecipeBackground as RecipeBackgroundDB, \
+    NutritionInformation as NutritionInformationDB
+from ...classes.schemas import *
 from ...ext.logger import log
 
 # Create name space
@@ -38,11 +31,9 @@ parser.add_argument('by', type=str, help='Type of background sort type.')
 ENDPOINT = "/recipe"
 
 ## Measuring constants
-COLHER_DE_CHA = 4
 
 RECIPES_SORT_DATE = "DATE"
 
-# TODO get recipes by user?
 
 # Create resources
 @api.route("/list")
@@ -118,115 +109,6 @@ class RecipeListResource(Resource):
         log.info("Finished GET /recipe/list")
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
-    def post(self):
-        """Create a new recipe by admin (placeholder until admin endpoints are created)"""
-        # logging
-        log.info("POST /recipe/list")
-
-        json_data = request.get_json()
-
-        # Validate args by loading it into schema
-
-        try:
-            recipe_validated = RecipeSchema().load(json_data)
-        except ValidationError as err:
-            return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
-
-        # Change get or create needed objects
-        # removing because the must be transformed before entity building
-        nutrition_table = recipe_validated.pop('nutrition_informations')
-        preparation = recipe_validated.pop('preparation')
-        ingredients = recipe_validated.pop('ingredients')
-        tags = recipe_validated.pop('tags')
-
-        # fills recipe object
-        recipe = RecipeDB(**recipe_validated)
-        recipe.preparation = str(preparation).encode()
-        # use .decode() to decode
-        recipe.save()
-
-        # build relation to nutrition_table
-
-        try:
-            if 'id' in nutrition_table:
-                nutrition_table.pop('id')
-
-            nutrition_information = NutritionInformationDB(**nutrition_table)
-            nutrition_information.recipe = recipe
-            nutrition_information.save()
-            recipe.nutrition_informations = nutrition_information
-        except Exception as e:
-            recipe.delete_instance(recursive=True)
-            return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
-
-        # build multi to multi relation to tags
-
-        try:
-            if tags and tags != {}:
-                for t in tags:
-                    tag, created = TagDB.get_or_create(title=t)
-                    tag.save()
-                    recipe.tags.add(tag)
-
-
-        except Exception as e:
-            recipe.delete_instance(recursive=True)
-            return Response(status=400, response="Tags Table has some error.\n" + str(e))
-
-        # build multi to multi relation to Ingredient Quantity
-        recipe.save()
-        try:
-            if ingredients and ingredients != {}:
-                for i in ingredients:
-                    ingredient, created = IngredientBase.get_or_create(name=i['name'])
-                    if created:
-                        ingredient.save()
-                    if i['quantity_original']:
-                        try:
-                            quantity_normalized = normalize_quantity(i['quantity_original'])
-                        except Exception as e:
-                            quantity_normalized = float(0)
-                            log.error("Tags Table has some error...")
-                    ingredient_quantity = Ingredient(quantity_original=i['quantity_original'], quantity_normalized=quantity_normalized)
-                    ingredient_quantity.ingredient = ingredient
-                    ingredient_quantity.recipe = recipe
-                    ingredient_quantity.save()
-
-        except Exception as e:
-            recipe.delete_instance(recursive=True)
-            log.error("Tags Table has some error...")
-            return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
-
-        # finally build full object
-
-        recipe.save()
-        log.info("Finished POST /recipe/list")
-        return Response(status=201)
-
-
-def normalize_quantity(quantity_original):
-
-    if 'g' in quantity_original:
-        return float(quantity_original.replace('g','').strip())
-
-    if 'gr' in quantity_original:
-        return float(quantity_original.replace('g','').strip())
-
-    if 'c. de chá' in  quantity_original:
-        quantity_helper = quantity_original.replace('c. de chá', '')
-        total = float(0)
-        if "½" in quantity_helper:
-            total =  0.5 * COLHER_DE_CHA
-            quantity_helper = quantity_helper.replace("½", '')
-        try:
-            total = total + float(quantity_helper.strip()) * COLHER_DE_CHA
-        except:
-            # Se o quantity_helper não der para ser parsed
-            log.debug(f"Quantity_helper was unable to be parsed {quantity_helper.strip()}")
-            pass
-
-        return total
-
 
 @api.route("")
 class RecipeResource(Resource):
@@ -299,7 +181,7 @@ class RecipeResource(Resource):
 
         # Change get or create needed objects
         # removing because the must be transformed before entity building
-        nutrition_table = recipe_validated.pop('nutrition_informations')
+        nutrition_table = recipe_validated.pop('nutrional_table')
         preparation = recipe_validated.pop('preparation')
         ingredients = recipe_validated.pop('ingredients')
         tags = recipe_validated.pop('tags')
@@ -308,21 +190,26 @@ class RecipeResource(Resource):
         recipe = RecipeDB(**recipe_validated)
         recipe.preparation = str(preparation).encode()
         # use .decode() to decode
-        recipe.save()
+
+        # set created by user
+        recipe.created_by = user
 
         # build relation to nutrition_table
 
         try:
             if nutrition_table and nutrition_table != {}:
                 nutrition_information = NutritionInformationDB(**nutrition_table)
-                nutrition_information.recipe = recipe
                 nutrition_information.save()
-                recipe.nutrition_informations = nutrition_information
+                recipe.nutrional_table = nutrition_information
 
         except Exception as e:
             recipe.delete_instance(recursive=True)
             log.error("Nutrition Table has some error...")
             return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
+
+        ## recipe needs to be saved after foreign key's but before multiple to multiple relations
+        # because to build these last one recipe needs to already have an id, wich is done by save()
+        recipe.save()
 
         # build relation to recipe_background
 
@@ -353,20 +240,23 @@ class RecipeResource(Resource):
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
         # build multi to multi relation to Ingredient Quantity
-        recipe.save()
         try:
             if ingredients and ingredients != {}:
                 for i in ingredients:
-                    ingredient, created = IngredientBase.get_or_create(name=i['ingredient']['name'])
+                    ingredient, created = Ingredient.get_or_create(name=i['ingredient']['name'])
+                    quantity_normalized = float(0)
                     if created:
                         ingredient.save()
                     if i['quantity_original']:
                         try:
                             quantity_normalized = normalize_quantity(i['quantity_original'])
                         except Exception as e:
-                            quantity_normalized = float(0)
+                            recipe.delete_instance(recursive=True)
                             log.error("Tags Table has some error...")
-                    ingredient_quantity = Ingredient(quantity_original=i['quantity_original'], quantity_normalized=quantity_normalized)
+                            return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
+
+                    ingredient_quantity = IngredientQuantity(quantity_original=i['quantity_original'],
+                                                             quantity_normalized=quantity_normalized)
                     ingredient_quantity.ingredient = ingredient
                     ingredient_quantity.recipe = recipe
                     ingredient_quantity.save()
@@ -1053,3 +943,156 @@ class RecipeCreatesResource(Resource):
 
         log.info("Finished GET /creates")
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+
+
+# como não existe backend os admins são alterados diretamente na bd ou então por alguem que já
+# o seja
+
+@api.route("/company")
+class RecipeListResource(Resource):
+
+    @jwt_required()
+    def post(self):
+        """Create a new recipe by admin"""
+        """This shall be used to create company recipes"""
+
+        # logging
+        log.info("POST /recipe/admin")
+
+        json_data = request.get_json()
+
+        args = parser.parse_args()
+
+        ## verify user
+
+        user_id = get_jwt_identity()
+
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and stil reach this far)
+            # this only occurs when accounts are not in db, so in prod this wont happen
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            log.error("User couln't be found.")
+            return Response(status=400, response="User couln't be found.")
+
+        if user.user_type != USER_TYPE.ADMIN.value:
+            return Response(status=403)
+
+        ## verify company
+
+
+        try:
+            user = UserDB.get(args['id'])
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and stil reach this far)
+            # this only occurs when accounts are not in db, so in prod this wont happen
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            log.error("User couln't be found.")
+            return Response(status=400, response="User couln't be found.")
+
+        print(user.user_type in USER_TYPE_SET)
+        if user.user_type != USER_TYPE.COMPANY.value:
+            return Response(status=400, response="User isn't a company.")
+
+        # Validate args by loading it into schema
+
+        try:
+            recipe_validated = RecipeSchema().load(json_data)
+        except ValidationError as err:
+            return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
+
+        # Change get or create needed objects
+        # removing because the must be transformed before entity building
+        nutrition_table = recipe_validated.pop('nutrition_informations')
+        preparation = recipe_validated.pop('preparation')
+        ingredients = recipe_validated.pop('ingredients')
+        tags = recipe_validated.pop('tags')
+
+        # fills recipe object
+        recipe = RecipeDB(**recipe_validated)
+        recipe.preparation = str(preparation).encode()
+        # use .decode() to decode
+        recipe.save()
+
+        # build relation to nutrition_table
+
+        try:
+            if 'id' in nutrition_table:
+                nutrition_table.pop('id')
+
+            nutrition_information = NutritionInformationDB(**nutrition_table)
+            nutrition_information.recipe = recipe
+            nutrition_information.save()
+            recipe.nutrition_informations = nutrition_information
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
+
+        # build multi to multi relation to tags
+
+        try:
+            if tags and tags != {}:
+                for t in tags:
+                    tag, created = TagDB.get_or_create(title=t)
+                    tag.save()
+                    recipe.tags.add(tag)
+
+
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            return Response(status=400, response="Tags Table has some error.\n" + str(e))
+
+        ## recipe needs to be saved after foreign key's but before multiple to multiple relations
+        # because to build these last one recipe needs to already have an id, wich is done by save()
+        recipe.save()
+
+        # build multi to multi relation to Ingredient Quantity
+
+        try:
+            if ingredients and ingredients != {}:
+                for i in ingredients:
+                    ingredient, created = IngredientQuantity.get_or_create(name=i['name'])
+                    if created:
+                        ingredient.save()
+                    if i['quantity_original']:
+                        try:
+                            quantity_normalized = normalize_quantity(i['quantity_original'])
+                        except Exception as e:
+                            quantity_normalized = float(0)
+                            log.error("Tags Table has some error...")
+                    ingredient_quantity = Ingredient(quantity_original=i['quantity_original'],
+                                                     quantity_normalized=quantity_normalized)
+                    ingredient_quantity.ingredient = ingredient
+                    ingredient_quantity.recipe = recipe
+                    ingredient_quantity.save()
+
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            log.error("Tags Table has some error...")
+            return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
+
+        # build relation to recipe_background
+
+        try:
+            recipe_background = RecipeBackgroundDB()
+            recipe_background.user = user
+            recipe_background.recipe = recipe
+            recipe_background.type = "CREATED"
+            recipe_background.save()
+        except Exception as e:
+            recipe.delete_instance(recursive=True)
+            log.error("Recipe Background Table has some error...")
+            return Response(status=400, response="Recipe Background Table has some error.\n" + str(e))
+
+        # finally build full object
+
+        recipe.save()
+        log.info("Finished POST /recipe/list")
+        return Response(status=201)

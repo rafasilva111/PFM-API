@@ -1,16 +1,16 @@
 import json
 import math
 from datetime import datetime, timezone
+
 import peewee
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from flask_restx import Namespace, Resource, fields, reqparse
 from flask import Response, request
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask_restx import Namespace, Resource
 from playhouse.shortcuts import model_to_dict
-from flask_app.ext.database import db
-from .errors import return_error_sql, student_no_exists
-from ...models import TokenBlocklist
-from ...models.model_metadata import build_metadata
-from ...models.model_user import User as UserDB, UserSchema, UserPatchSchema
+
+from .errors import return_error_sql
+from ...classes.models import User as UserDB
+from ...classes.schemas import *
 from ...ext.logger import log
 
 # Create name space
@@ -109,6 +109,7 @@ class UserListResource(Resource):
             log.info("Finished GET /user/list")
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
+
 @api.route("")
 class UserResource(Resource):
 
@@ -119,6 +120,7 @@ class UserResource(Resource):
 
         # get args
         args = parser.parse_args()
+
         id = args['id']
 
         # Validate args
@@ -133,7 +135,6 @@ class UserResource(Resource):
         except peewee.DoesNotExist:
             log.error("User couldn't be found by this id.")
             return Response(status=400, response="User couldn't be found by this id.")
-
 
     @jwt_required()
     def delete(self):
@@ -162,7 +163,6 @@ class UserResource(Resource):
         except peewee.IntegrityError as e:
             log.error(return_error_sql(e))
             return Response(status=400, response=return_error_sql(e))
-
 
     @jwt_required()
     def patch(self):
@@ -197,18 +197,16 @@ class UserResource(Resource):
 
         try:
             for key, value in user_validated.items():
-                    setattr(user_making_patch, key, value)
+                setattr(user_making_patch, key, value)
             import pytz  # $ pip install pytz
-
 
             user_making_patch.updated_date = datetime.now(timezone.utc)
             user_making_patch.save()
 
-
             log.info("Finished PATCH /user")
-            return Response(status=200,response=json.dumps(UserSchema().dump(model_to_dict(user_making_patch, backrefs=True, recurse=True, manytomany=True))), mimetype="application/json")
+            return Response(status=200, response=json.dumps(
+                UserSchema().dump(model_to_dict(user_making_patch, backrefs=True, recurse=True, manytomany=True))),
+                            mimetype="application/json")
         except Exception as e:
             log.error(return_error_sql(e))
             return return_error_sql(e)
-
-
