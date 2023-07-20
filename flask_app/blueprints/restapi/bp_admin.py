@@ -1,8 +1,9 @@
 import json
 from datetime import date
 
+import peewee
 from flask import Response, Blueprint, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 
 from flask_app.ext.database import db
@@ -36,17 +37,23 @@ parser.add_argument('id', type=int, help='The id to be search.')
 
 ENDPOINT_COMPANY = "/admin/company"
 
+
 @api.route("")
 class CompanyUserResource(Resource):
 
     @jwt_required()
     def post(self):
         """ Register a new user """
-        # Get json data
 
         log.info("POST /auth")
 
+        # Get json data
+
         json_data = request.get_json()
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
 
         # Validate args by loading it into schema
 
@@ -64,6 +71,18 @@ class CompanyUserResource(Resource):
             return Response(status=409, response="An object whit the same email already exist...")
         except:
             pass
+
+        # Verify existence of the requested ids model's
+
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            return Response(status=400, response="Client couldn't be found.")
+
+        # Verify if user is admin
+
+        if user.user_type != USER_TYPE.ADMIN.value:
+            return Response(status=403)
 
         # fills db objects
 

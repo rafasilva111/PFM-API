@@ -146,6 +146,8 @@ class RecipeSchema(ma.Schema):
     nutrional_table = fields.Nested(NutritionInformationSchema)
     backgrounds = fields.Nested(RecipeBackgroundSimplifiedSchema, required=True, many=True, dump_only=True)
     tags = fields.List(fields.String(), required=True)
+    created_by = fields.Nested(UserSimpleSchema,dump_only=True)
+
 
     source_rating = fields.String(required=False)
     source_link = fields.String(required=False)

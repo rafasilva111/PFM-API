@@ -39,9 +39,9 @@ USER_TYPE_SET = USER_TYPE._value2member_map_
 
 
 class CALENDER_ENTRY_TAG(Enum):
-    PEQUENO_ALMOÇO = "PEQUENO ALMOÇO"
+    PEQUENO_ALMOCO = "PEQUENO ALMOÇO"
     LANCHE_DA_MANHA = "LANCHE DA MANHÃ"
-    ALMOÇO = "ALMOÇO"
+    ALMOCO = "ALMOÇO"
     LANCHE_DA_TARDE = "LANCHE DA TARDE"  # (normal, company, vip, admin)
     JANTAR = "JANTAR"  # (normal, company, vip, admin)
     CEIA = "CEIA"  # (normal, company, vip, admin)
@@ -49,9 +49,11 @@ class CALENDER_ENTRY_TAG(Enum):
 
 CALENDER_ENTRY_TAG_SET = CALENDER_ENTRY_TAG._value2member_map_
 
+
 class PROFILE_TYPE(Enum):
     PUBLIC = "PUBLIC"
     PRIVATE = "PRIVATE"
+
 
 PROFILE_TYPE_SET = PROFILE_TYPE._value2member_map_
 
@@ -134,7 +136,7 @@ class Recipe(BaseModel):
     preparation = BlobField(null=False)
 
     created_by = ForeignKeyField(User, backref="created_by")
-    nutrional_table = ForeignKeyField(NutritionInformation, backref='recipe')
+    nutrition_information = ForeignKeyField(NutritionInformation, backref='recipe',null=True)
 
     source_rating = FloatField(null=True)
     source_link = CharField(null=True)
@@ -146,7 +148,7 @@ class Recipe(BaseModel):
 class RecipeBackground(BaseModel):
     user = ForeignKeyField(User, backref="recipes")
     recipe = ForeignKeyField(Recipe, backref="backgrounds")
-    type = CharField(null=False)  # (liked, saved, created)
+    type = CharField(null=False)  # (liked, saved)
 
     class Meta:
         db_table = 'recipe_background'
