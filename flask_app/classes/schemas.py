@@ -143,7 +143,7 @@ class RecipeSchema(ma.Schema):
 
     ingredients = fields.Nested(IngredientQuantitySchema, required=True, many=True)
     preparation = fields.Nested(PreparationSchema, required=True, many=True)
-    nutrional_table = fields.Nested(NutritionInformationSchema)
+    nutrition_information = fields.Nested(NutritionInformationSchema)
     backgrounds = fields.Nested(RecipeBackgroundSimplifiedSchema, required=True, many=True, dump_only=True)
     tags = fields.List(fields.String(), required=True)
     created_by = fields.Nested(UserSimpleSchema,dump_only=True)
@@ -350,9 +350,9 @@ class CalendarEntrySchema(ma.Schema):
     user = fields.Dict(required=True,dump_only=True)
     recipe = fields.Dict(required=True,dump_only=True)
     tag = fields.String(validate=lambda x: x in CALENDER_ENTRY_TAG_SET,required=True, null=False)
-    created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
-    marked_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S+00:00',required=True)
-    checked_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S+00:00')
+    created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S')
+    marked_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S',required=True)
+    checked_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S ')
 
     @pre_dump
     def prepare_user_and_recipe(self, data, **kwargs):
