@@ -181,7 +181,7 @@ class RecipeResource(Resource):
 
         # Change get or create needed objects
         # removing because the must be transformed before entity building
-        nutrition_table = recipe_validated.pop('nutrional_table')
+        nutrition_table = recipe_validated.pop('nutrition_information')
         preparation = recipe_validated.pop('preparation')
         ingredients = recipe_validated.pop('ingredients')
         tags = recipe_validated.pop('tags')
