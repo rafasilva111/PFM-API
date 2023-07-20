@@ -200,7 +200,7 @@ class RecipeResource(Resource):
             if nutrition_table and nutrition_table != {}:
                 nutrition_information = NutritionInformationDB(**nutrition_table)
                 nutrition_information.save()
-                recipe.nutrional_table = nutrition_information
+                recipe.nutrition_information = nutrition_information
 
         except Exception as e:
             recipe.delete_instance(recursive=True)
