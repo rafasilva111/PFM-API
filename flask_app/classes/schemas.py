@@ -72,6 +72,7 @@ class IngredientQuantitySchema(ma.Schema):
     ingredient = fields.Nested(IngredientSchema, required=True)
     quantity_original = fields.String(required=True)
     quantity_normalized = fields.Float(required=False, default=None, allow_none=True)
+    units_normalized = fields.String(validate=lambda x: x in USER_TYPE_SET)
 
     class Meta:
         ordered = True
@@ -165,7 +166,7 @@ class RecipeSchema(ma.Schema):
     tags = fields.List(fields.String(), required=True)
     created_by = fields.Nested(UserSimpleSchema, dump_only=True)
 
-    rating = fields.String(required=False)
+    rating = fields.Float(default=0.0)
     source_rating = fields.String(required=False)
     source_link = fields.String(required=False)
     company = fields.String(required=False)
@@ -248,6 +249,7 @@ class UserSchema(ma.Schema):
     password = fields.String(load_only=True)
 
     description = fields.String(required=False)
+    rating = fields.Float(default=0.0)
 
     profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE_SET)
     verified = fields.Boolean()
@@ -376,8 +378,8 @@ class CalendarEntrySchema(ma.Schema):
     recipe = fields.Nested(RecipeSimpleSchema, required=True, dump_only=True)
     tag = fields.String(validate=lambda x: x in CALENDER_ENTRY_TAG_SET, required=True, null=False)
     created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S')
-    marked_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S', required=True)
-    checked_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S ')
+    realization_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S', required=True)
+    checked_done = fields.Boolean(default=0,dump_only=True)
 
     class Meta:
         ordered = True

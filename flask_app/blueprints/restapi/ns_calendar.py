@@ -24,7 +24,7 @@ parser = api.parser()
 parser.add_argument('page', type=int, help='The page number.')
 parser.add_argument('page_size', type=int, help='The page size.')
 parser.add_argument('id', type=int, help='The id to be search.')
-parser.add_argument('date', type=str, help='The date where we want to get the calender list, this will som 15 days to ')
+parser.add_argument('date', type=str, help='The date.')
 parser.add_argument('from_date', type=str, help='The left date delimiter.')
 parser.add_argument('to_date', type=str, help='The right date delimiter.')  # 'dd/mm/yyyy'
 parser.add_argument('user_id', type=int, help='The user id to be search.')
@@ -48,7 +48,9 @@ class CalendarListResource(Resource):
 
         page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
-        date = str(args['date']) if args['date'] else 5
+        date = parse_date(args['date']) if args['date'] else None
+        from_date = parse_date(args['from_date']) if args['from_date'] else None
+        to_date = parse_date(args['to_date']) if args['to_date'] else None
 
         # validate args
 
@@ -66,13 +68,16 @@ class CalendarListResource(Resource):
         # query
 
         if date:
-            date = parse_date(date)
-
-            from_date = add_days(date, -15)
-            to_date = add_days(date, 15)
+            next_day = add_days(date, 1)
             query = CalendarEntry.select().where(
-                (CalendarEntry.created_date >= from_date) &
-                (CalendarEntry.created_date <= to_date)
+                (CalendarEntry.realization_date >= date) &
+                (CalendarEntry.realization_date <= next_day)
+            )
+
+        elif from_date and to_date:
+            query = CalendarEntry.select().where(
+                (CalendarEntry.realization_date >= from_date) &
+                (CalendarEntry.realization_date <= to_date)
             )
 
         else:

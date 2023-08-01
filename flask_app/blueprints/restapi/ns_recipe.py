@@ -295,18 +295,19 @@ class RecipeResource(Resource):
                 for i in ingredients:
                     ingredient, created = Ingredient.get_or_create(name=i['ingredient']['name'])
                     quantity_normalized = float(0)
+                    units_normalized = UNITS_TYPE.GRAMS.value
                     if created:
                         ingredient.save()
                     if i['quantity_original']:
                         try:
-                            quantity_normalized = normalize_quantity(i['quantity_original'])
+                            units_normalized, quantity_normalized = normalize_quantity(i['quantity_original'])
                         except Exception as e:
                             recipe.delete_instance(recursive=True)
                             log.error("Tags Table has some error...")
                             return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
 
                     ingredient_quantity = IngredientQuantity(quantity_original=i['quantity_original'],
-                                                             quantity_normalized=quantity_normalized)
+                                                             quantity_normalized=quantity_normalized,units_normalized=units_normalized)
                     ingredient_quantity.ingredient = ingredient
                     ingredient_quantity.recipe = recipe
                     ingredient_quantity.save()

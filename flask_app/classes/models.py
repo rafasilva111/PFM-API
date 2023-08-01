@@ -27,6 +27,13 @@ class ReconectMySQLDatabase(ReconnectMixin, MySQLDatabase, ABC):
 db = ReconectMySQLDatabase(database=database, user=db_user, password=db_password,
                            host=host)
 
+class UNITS_TYPE(Enum):
+    GRAMS = "G"
+    UNITS = "U"
+
+
+USER_TYPE_SET = UNITS_TYPE._value2member_map_
+
 
 class USER_TYPE(Enum):
     NORMAL = "N"
@@ -139,7 +146,7 @@ class Recipe(BaseModel):
     preparation = BlobField(null=False)
 
     created_by = ForeignKeyField(User, backref="created_by")
-    nutrition_information = ForeignKeyField(NutritionInformation, backref='recipe',null=True)
+    nutrition_information = ForeignKeyField(NutritionInformation, backref='recipe',null=True,on_delete='CASCADE')
 
     rating = FloatField(default=0.0)
     source_rating = FloatField(null=True)
@@ -175,6 +182,7 @@ class IngredientQuantity(BaseModel):
     recipe = ForeignKeyField(Recipe, backref="ingredients")
     quantity_original = CharField(null=False)
     quantity_normalized = FloatField(null=True)
+    units_normalized = CharField(default="G")
 
     class Meta:
         db_table = 'recipe_ingredient_quantity'
@@ -196,7 +204,7 @@ class CalendarEntry(BaseModel):
     user = ForeignKeyField(User, backref='user')
     tag = CharField(null=False)  # Pequeno almoço, Lanche da manhã, Almoço, Lanche da tarde ,Jantar , Ceia
     created_date = DateTimeField(default=datetime.now, null=False)
-    checked_date = DateTimeField(null=True)
+    realization_date = DateTimeField(null=False)
     checked_done = BooleanField(default=False)
 
     class Meta:
