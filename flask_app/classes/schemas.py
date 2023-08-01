@@ -93,6 +93,8 @@ class UserSimpleSchema(ma.Schema):
     name = fields.String(required=True)
     email = fields.Email(required=True)
 
+    description = fields.String(required=False)
+
     profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE_SET)
     verified = fields.Boolean()
     user_type = fields.String(validate=lambda x: x in USER_TYPE_SET)
@@ -163,6 +165,7 @@ class RecipeSchema(ma.Schema):
     tags = fields.List(fields.String(), required=True)
     created_by = fields.Nested(UserSimpleSchema, dump_only=True)
 
+    rating = fields.String(required=False)
     source_rating = fields.String(required=False)
     source_link = fields.String(required=False)
     company = fields.String(required=False)
@@ -205,6 +208,7 @@ class RecipeSimpleSchema(ma.Schema):
     likes = fields.Integer(default=0, required=False)
     views = fields.Integer(default=0, required=False)
 
+    rating = fields.String(required=False)
     source_rating = fields.String(required=False)
     source_link = fields.String(required=False)
     company = fields.String(required=False)
@@ -242,6 +246,8 @@ class UserSchema(ma.Schema):
     birth_date = fields.DateTime(format='%d/%m/%Y', required=True)
     email = fields.Email(required=True)
     password = fields.String(load_only=True)
+
+    description = fields.String(required=False)
 
     profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE_SET)
     verified = fields.Boolean()
@@ -301,6 +307,7 @@ class UserPatchSchema(ma.Schema):
     last_name = fields.String(required=False)
     password = fields.String(load_only=True)
     img_source = fields.String(required=False)
+    description = fields.String(required=False)
     activity_level = fields.Float(required=False)
     height = fields.Float(required=False)
     weight = fields.Float(required=False)

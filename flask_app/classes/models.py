@@ -73,10 +73,13 @@ class User(BaseModel):
     email = CharField(unique=True, null=False)
     password = CharField(null=False)
 
+    description = CharField(default="") #max length 255
+
     profile_type = CharField(default="PRIVATE")  # (protect, private, public)
     verified = BooleanField(default=False)
     user_type = CharField(default="N")  # (normal, company, vip, admin)
     img_source = CharField(default="")
+    rating = FloatField(default=0.0)
 
     activity_level = FloatField(default=-1)
     height = FloatField(default=-1)
@@ -138,6 +141,7 @@ class Recipe(BaseModel):
     created_by = ForeignKeyField(User, backref="created_by")
     nutrition_information = ForeignKeyField(NutritionInformation, backref='recipe',null=True)
 
+    rating = FloatField(default=0.0)
     source_rating = FloatField(null=True)
     source_link = CharField(null=True)
 
