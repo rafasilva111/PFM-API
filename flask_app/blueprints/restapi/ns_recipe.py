@@ -1032,6 +1032,9 @@ class RecipeListResource(Resource):
 
         # Validate args by loading it into schema
 
+
+        nutrition_table = json_data.pop('nutrition_information')
+
         try:
             recipe_validated = RecipeSchema().load(json_data)
         except ValidationError as err:
@@ -1051,8 +1054,7 @@ class RecipeListResource(Resource):
         recipe.created_by = user
 
         # build relation to nutrition_table
-        if 'nutrition_information' in recipe_validated:
-            nutrition_table = recipe_validated.pop('nutrition_information')
+        if nutrition_table:
             try:
                 if 'id' in nutrition_table:
                     nutrition_table.pop('id')
