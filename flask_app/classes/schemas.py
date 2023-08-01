@@ -7,7 +7,6 @@ from flask_app.ext.schema import ma
 
 from flask_app.classes.models import *
 
-
 SEXES = {"M", "F", "NA"}
 
 # Schemas
@@ -63,12 +62,20 @@ class IngredientSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     name = fields.String(required=True)
 
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
 
 class IngredientQuantitySchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     ingredient = fields.Nested(IngredientSchema, required=True)
     quantity_original = fields.String(required=True)
-    quantity_normalized = fields.Float(required=False, default=None)
+    quantity_normalized = fields.Float(required=False, default=None, allow_none=True)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
 
 
 class PreparationSchema(ma.Schema):
@@ -105,25 +112,33 @@ class RecipeBackgroundSimplifiedSchema(ma.Schema):
         ordered = True
 
 
+class StringOrEmpty(fields.String):
+    def _serialize(self, value, attr, obj, **kwargs):
+        if value is None:
+            return ""
+        return super()._serialize(value, attr, obj, **kwargs)
+
+
 class NutritionInformationSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     energia = fields.String(required=True)
-    energia_perc = fields.String()
+    energia_perc = fields.String(allow_none=True)
     gordura = fields.String(required=True)
-    gordura_perc = fields.String()
+    gordura_perc = fields.String(allow_none=True)
     gordura_saturada = fields.String(required=True)
-    gordura_saturada_perc = fields.String()
+    gordura_saturada_perc = fields.String(allow_none=True)
     hidratos_carbonos = fields.String(required=True)
-    hidratos_carbonos_perc = fields.String()
+    hidratos_carbonos_perc = StringOrEmpty()
     hidratos_carbonos_acucares = fields.String(required=True)
-    hidratos_carbonos_acucares_perc = fields.String()
+    hidratos_carbonos_acucares_perc = StringOrEmpty()
     fibra = fields.String(required=True)
-    fibra_perc = fields.String()
+    fibra_perc = fields.String(allow_none=True)
     proteina = fields.String(required=True)
-    proteina_perc = fields.String()
+    proteina_perc = StringOrEmpty()
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
 
 class RecipeSchema(ma.Schema):
@@ -146,8 +161,7 @@ class RecipeSchema(ma.Schema):
     nutrition_information = fields.Nested(NutritionInformationSchema)
     backgrounds = fields.Nested(RecipeBackgroundSimplifiedSchema, required=True, many=True, dump_only=True)
     tags = fields.List(fields.String(), required=True)
-    created_by = fields.Nested(UserSimpleSchema,dump_only=True)
-
+    created_by = fields.Nested(UserSimpleSchema, dump_only=True)
 
     source_rating = fields.String(required=False)
     source_link = fields.String(required=False)
@@ -158,6 +172,7 @@ class RecipeSchema(ma.Schema):
 
     class Meta:
         ordered = True
+        unknown = EXCLUDE
 
     @pre_dump
     def unlist(self, data, **kwargs):
@@ -193,6 +208,9 @@ class RecipeSimpleSchema(ma.Schema):
     source_rating = fields.String(required=False)
     source_link = fields.String(required=False)
     company = fields.String(required=False)
+
+    tags = fields.List(fields.String(), required=True)
+    created_by = fields.Nested(UserSimpleSchema, dump_only=True)
 
     created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
     updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
@@ -347,24 +365,17 @@ class CommentSchema(ma.Schema):
 
 class CalendarEntrySchema(ma.Schema):
     id = fields.Integer(dump_only=True)
-    user = fields.Dict(required=True,dump_only=True)
-    recipe = fields.Dict(required=True,dump_only=True)
-    tag = fields.String(validate=lambda x: x in CALENDER_ENTRY_TAG_SET,required=True, null=False)
+    user = fields.Nested(UserSimpleSchema, required=True, dump_only=True)
+    recipe = fields.Nested(RecipeSimpleSchema, required=True, dump_only=True)
+    tag = fields.String(validate=lambda x: x in CALENDER_ENTRY_TAG_SET, required=True, null=False)
     created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S')
-    marked_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S',required=True)
+    marked_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S', required=True)
     checked_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S ')
-
-    @pre_dump
-    def prepare_user_and_recipe(self, data, **kwargs):
-        if 'recipe' in data:
-            data['recipe'] = RecipeSimpleSchema().dump(data['recipe'])
-        if 'user' in data:
-            data['user'] = UserSimpleSchema().dump(data['user'])
-        return data
 
     class Meta:
         ordered = True
         unknown = EXCLUDE
+
 
 ''' Miscellanius '''
 

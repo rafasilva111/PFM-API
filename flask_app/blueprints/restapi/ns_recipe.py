@@ -8,7 +8,7 @@ from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
 from playhouse.shortcuts import model_to_dict
 
-from .util.functions import normalize_quantity
+from ...classes.functions import normalize_quantity
 from ...classes.models import Recipe as RecipeDB, \
     RecipeTagThrough as RecipeTagThroughDB, Tag as TagDB, User as UserDB, RecipeBackground as RecipeBackgroundDB, \
     NutritionInformation as NutritionInformationDB
@@ -30,9 +30,17 @@ parser.add_argument('by', type=str, help='Type of background sort type.')
 
 ENDPOINT = "/recipe"
 
+
 ## Measuring constants
 
-RECIPES_SORT_DATE = "DATE"
+class RECIPES_SORTING_TYPE(Enum):
+    DATE = "DATE"
+    LIKES = "LIKES"
+    SAVES = "SAVES"
+    RANDOM = "RANDOM"
+
+
+RECIPES_SORTING_TYPE_SET = RECIPES_SORTING_TYPE._value2member_map_
 
 
 # Create resources
@@ -52,7 +60,7 @@ class RecipeListResource(Resource):
         user_id = args['user_id']  # todo falta procura por user_id
         page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
-        by = str(args['by']) if args['by'] and args['by'] in [RECIPES_SORT_DATE] else RECIPES_SORT_DATE
+        by = str(args['by']) if args['by'] and args['by'] in RECIPES_SORTING_TYPE_SET else None
 
         # validate args
 
@@ -67,28 +75,70 @@ class RecipeListResource(Resource):
 
         # query building
 
+        # Pesquisa por String
+        if args['string']:
+
+            query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
+                .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string']))
+        else:
+        # pesquisa normal
+            query = RecipeDB.select()
+
         # Check if sorted
 
-        # Check if sorted by date
-        if args['by'] == RECIPES_SORT_DATE:
-            # Pesquisa por String
-            if args['string']:
+        if by:
+            if by == RECIPES_SORTING_TYPE.DATE.value:
 
-                query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
-                    .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string'])) \
-                    .order_by(RecipeDB.created_date)
-            else:
+                 query = query.order_by(RecipeDB.created_date)
 
-                query = RecipeDB.select().order_by(RecipeDB.created_date)
-        else:
-            # Pesquisa por String
-            if args['string']:
+            elif by == RECIPES_SORTING_TYPE.RANDOM.value:
 
-                query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
-                    .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string']))
-            else:
+                query = query.order_by(peewee.fn.Rand())
+            elif by == RECIPES_SORTING_TYPE.LIKES.value and args['string']:
 
-                query = RecipeDB.select()
+                likes_subquery = (RecipeBackground
+                                  .select(peewee.fn.COUNT(RecipeBackground.id))
+                                  .where((RecipeBackground.recipe == RecipeDB.id) &
+                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE_LIKED))
+                                  .alias('likes'))
+
+                query = (RecipeDB
+                         .select(RecipeDB, likes_subquery)
+                         .order_by(peewee.SQL('likes').desc()))
+            elif by == RECIPES_SORTING_TYPE.LIKES.value:
+
+                likes_subquery = (RecipeBackground
+                                  .select(peewee.fn.COUNT(RecipeBackground.id))
+                                  .where((RecipeBackground.recipe == RecipeDB.id) &
+                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE_LIKED))
+                                  .alias('likes'))
+
+                query = (RecipeDB
+                         .select(RecipeDB, likes_subquery)
+                         .order_by(peewee.SQL('likes').desc()))
+            elif by == RECIPES_SORTING_TYPE.SAVES.value and args['string']:
+
+                likes_subquery = (RecipeBackground
+                                  .select(peewee.fn.COUNT(RecipeBackground.id))
+                                  .where((RecipeBackground.recipe == RecipeDB.id) &
+                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE_SAVED))
+                                  .alias('saves'))
+
+                query = RecipeDB.select(RecipeDB, likes_subquery).distinct().join(RecipeTagThroughDB).join(TagDB) \
+                    .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string'])).order_by(peewee.SQL('saves').desc())
+
+            elif by == RECIPES_SORTING_TYPE.SAVES.value:
+
+                saves_subquery = (RecipeBackground
+                                  .select(peewee.fn.COUNT(RecipeBackground.id))
+                                  .where((RecipeBackground.recipe == RecipeDB.id) &
+                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE_SAVED))
+                                  .alias('saves'))
+
+                query = (RecipeDB
+                         .select(RecipeDB, saves_subquery)
+                         .order_by(peewee.SQL('saves').desc()))
+
 
         # metadata
 
@@ -978,7 +1028,7 @@ class RecipeListResource(Resource):
             return Response(status=400, response="User couln't be found.")
 
         if user.user_type != USER_TYPE.COMPANY.value:
-            return Response(status=403,response="User is not a company.")
+            return Response(status=403, response="User is not a company.")
 
         # Validate args by loading it into schema
 
@@ -989,9 +1039,9 @@ class RecipeListResource(Resource):
 
         # Change get or create needed objects
         # removing because the must be transformed before entity building
-
-        preparation = recipe_validated.pop('preparation')
         ingredients = recipe_validated.pop('ingredients')
+        preparation = recipe_validated.pop('preparation')
+
         tags = recipe_validated.pop('tags')
 
         # fills recipe object
@@ -999,11 +1049,10 @@ class RecipeListResource(Resource):
         recipe.preparation = str(preparation).encode()
         # use .decode() to decode
         recipe.created_by = user
-        
 
         # build relation to nutrition_table
-        if 'nutrional_table' in recipe_validated:
-            nutrition_table = recipe_validated.pop('nutrional_table')
+        if 'nutrition_information' in recipe_validated:
+            nutrition_table = recipe_validated.pop('nutrition_information')
             try:
                 if 'id' in nutrition_table:
                     nutrition_table.pop('id')
@@ -1034,8 +1083,6 @@ class RecipeListResource(Resource):
 
             recipe.delete_instance(recursive=True)
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
-
-
 
         # build multi to multi relation to Ingredient Quantity
 

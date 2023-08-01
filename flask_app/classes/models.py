@@ -110,13 +110,13 @@ class NutritionInformation(BaseModel):
     gordura_saturada = CharField()
     gordura_saturada_perc = CharField()
     hidratos_carbonos = CharField()
-    hidratos_carbonos_perc = CharField()
+    hidratos_carbonos_perc = CharField(null=True) ## TODO depois de o hugo fazer os calculos automaticos remover null=True
     hidratos_carbonos_acucares = CharField()
-    hidratos_carbonos_acucares_perc = CharField()
+    hidratos_carbonos_acucares_perc = CharField(null=True) ## TODO depois de o hugo fazer os calculos automaticos remover null=True
     fibra = CharField()
     fibra_perc = CharField()
     proteina = CharField()
-    proteina_perc = CharField()
+    proteina_perc = CharField(null=True) ## TODO depois de o hugo fazer os calculos automaticos remover null=True
 
     class Meta:
         db_table = 'nutrition_information'

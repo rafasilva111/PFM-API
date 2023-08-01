@@ -9,8 +9,9 @@ from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
 from playhouse.shortcuts import model_to_dict
 
+from ...classes.functions import parse_date, add_days
 from ...classes.models import Recipe as RecipeDB, Comment as CommentDB, Follow as FollowDB, User as UserDB, \
-    CalendarEntry, TokenBlocklist
+    CalendarEntry, TokenBlocklist, IngredientQuantity, Recipe
 from ...classes.schemas import CommentSchema, FollowedsSchema, FollowersSchema, build_metadata, CalendarEntrySchema
 from ...ext.logger import log
 
@@ -23,6 +24,9 @@ parser = api.parser()
 parser.add_argument('page', type=int, help='The page number.')
 parser.add_argument('page_size', type=int, help='The page size.')
 parser.add_argument('id', type=int, help='The id to be search.')
+parser.add_argument('date', type=str, help='The date where we want to get the calender list, this will som 15 days to ')
+parser.add_argument('from_date', type=str, help='The left date delimiter.')
+parser.add_argument('to_date', type=str, help='The right date delimiter.')  # 'dd/mm/yyyy'
 parser.add_argument('user_id', type=int, help='The user id to be search.')
 parser.add_argument('recipe_id', type=int, help='The recipe id to be search.')
 
@@ -44,6 +48,7 @@ class CalendarListResource(Resource):
 
         page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
+        date = str(args['date']) if args['date'] else 5
 
         # validate args
 
@@ -58,9 +63,24 @@ class CalendarListResource(Resource):
 
         response_holder = {}
 
+        # query
+
+        if date:
+            date = parse_date(date)
+
+            from_date = add_days(date, -15)
+            to_date = add_days(date, 15)
+            query = CalendarEntry.select().where(
+                (CalendarEntry.created_date >= from_date) &
+                (CalendarEntry.created_date <= to_date)
+            )
+
+        else:
+            query = CalendarEntry.select()
+
         # metadata
 
-        total_comments = int(CalendarEntry.select().count())
+        total_comments = int(query.count())
         total_pages = math.ceil(total_comments / page_size)
         metadata = build_metadata(page, page_size, total_pages, total_comments, ENDPOINT)
         response_holder["_metadata"] = metadata
@@ -68,7 +88,7 @@ class CalendarListResource(Resource):
         # response data
 
         calendar_entrys = []
-        for item in CalendarEntry.select().paginate(page, page_size):
+        for item in query.paginate(page, page_size):
             calendar_entry = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
             calendar_entrys.append(CalendarEntrySchema().dump(calendar_entry))
 
@@ -78,13 +98,73 @@ class CalendarListResource(Resource):
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 
+@api.route("/ingredients/list")
+class CalendarListResource(Resource):
+
+    def get(self):
+        """List all calender"""
+
+        log.info("GET /calendar/list")
+
+        # Get args
+
+        args = parser.parse_args()
+
+        from_date = parse_date(args['from_date']) if args['from_date'] else None
+        to_date = parse_date(args['to_date']) if args['to_date'] else None
+
+        # validate args
+
+        if from_date is None:
+            return Response(status=400, response="From date cant be null")
+
+        if to_date is None:
+            return Response(status=400, response="To date cant be null")
+
+        if from_date > to_date:
+            return Response(status=400, response="From date cant be after to date.")
+
+        # declare response holder
+
+        response_holder = {}
+
+        # query
+
+        query = (IngredientQuantity
+                 .select()
+                 .join(Recipe)
+                 .join(CalendarEntry)
+                 .where((CalendarEntry.created_date >= from_date) &
+                        (CalendarEntry.created_date <= to_date)))
+
+        total_ingredients = {}
+
+        for item in query:
+            portion = 1
+            if item.recipe.portion and 'pessoas' in item.recipe.portion:
+                portion = item.recipe.portion.split(" ")[0]
+
+            if item.ingredient.name in total_ingredients and item.quantity_normalized is not None:
+                total_ingredients[item.ingredient.name] = total_ingredients[
+                                                              item.ingredient.name] + (
+                                                                      item.quantity_normalized / portion)
+            else:
+                total_ingredients[item.ingredient.name] = item.quantity_normalized + (
+                            item.quantity_normalized / portion)
+        # response data
+
+        response_holder["result"] = total_ingredients
+
+        log.info("Finish GET /follow/list")
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+
+
 @api.route("")
-@api.doc("Follow partial")
 class CalendarResource(Resource):
 
     @jwt_required()
     def get(self):
-        """ Get a follow whit ID """
+        """ Get a calendar whit ID """
 
         log.info("GET /calendar")
         # Get args
@@ -175,8 +255,6 @@ class CalendarResource(Resource):
 
         return Response(status=201)
 
-
-
     @jwt_required()
     def delete(self):
         """Delete a comment by ID"""
@@ -201,13 +279,12 @@ class CalendarResource(Resource):
 
         # delete by referencing the user id
         try:
-            calendar_entry = CalendarEntry.get(id,CalendarEntry.user == user_id)
+            calendar_entry = CalendarEntry.get(id, CalendarEntry.user == user_id)
         except peewee.DoesNotExist:
             log.error("User does not follow referenced account.")
             return Response(status=400, response="User does not follow referenced account.")
 
         calendar_entry.delete_instance()
-
 
         log.info("Finish DELETE /calendar")
         return Response(status=200)
