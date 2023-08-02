@@ -12,7 +12,8 @@ from playhouse.shortcuts import model_to_dict
 from ...classes.functions import parse_date, add_days
 from ...classes.models import Recipe as RecipeDB, Comment as CommentDB, Follow as FollowDB, User as UserDB, \
     CalendarEntry, TokenBlocklist, IngredientQuantity, Recipe
-from ...classes.schemas import CommentSchema, FollowedsSchema, FollowersSchema, build_metadata, CalendarEntrySchema
+from ...classes.schemas import CommentSchema, FollowedsSchema, FollowersSchema, build_metadata, CalendarEntrySchema, \
+    CalenderIngredient
 from ...ext.logger import log
 
 # Create name space
@@ -60,6 +61,8 @@ class CalendarListResource(Resource):
         if page_size not in [5, 10, 20, 40]:
             log.error("page_size not in [5, 10, 20, 40]")
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
+        if from_date and to_date and from_date > to_date:
+            return Response(status=400, response="something wrong whit from_date and to_date")
 
         # declare response holder
 
@@ -75,11 +78,33 @@ class CalendarListResource(Resource):
             )
 
         elif from_date and to_date:
+
             query = CalendarEntry.select().where(
                 (CalendarEntry.realization_date >= from_date) &
                 (CalendarEntry.realization_date <= to_date)
-            )
+            ).order_by(CalendarEntry.realization_date)
 
+            # groups calender list to dates
+
+            ## fills list
+            date_to_entries = {}
+            for item in query:
+                date_string = item.realization_date.strftime("%d/%m/%Y")
+                if date_string not in date_to_entries:
+                    date_to_entries[date_string] = []
+                date_to_entries[date_string].append(
+                    CalendarEntrySchema().dump(model_to_dict(item, backrefs=True, recurse=True, manytomany=True)))
+
+            ## fills list whit empty arrays
+            response_holder["result"] = {}
+            next_day = from_date
+            while next_day <= to_date:
+                next_day_string = next_day.strftime("%d/%m/%Y")
+                response_holder["result"][next_day_string] = date_to_entries.get(next_day_string, [])
+                next_day = add_days(next_day, 1)
+
+            log.info("Finish GET /calender/list")
+            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
         else:
             query = CalendarEntry.select()
 
@@ -99,7 +124,7 @@ class CalendarListResource(Resource):
 
         response_holder["result"] = calendar_entrys
 
-        log.info("Finish GET /follow/list")
+        log.info("Finish GET /calender/list")
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 
@@ -139,26 +164,29 @@ class CalendarListResource(Resource):
                  .select()
                  .join(Recipe)
                  .join(CalendarEntry)
-                 .where((CalendarEntry.created_date >= from_date) &
-                        (CalendarEntry.created_date <= to_date)))
+                 .where((CalendarEntry.realization_date >= from_date) &
+                        (CalendarEntry.realization_date <= to_date)))
 
         total_ingredients = {}
 
         for item in query:
             portion = 1
             if item.recipe.portion and 'pessoas' in item.recipe.portion:
-                portion = item.recipe.portion.split(" ")[0]
+                portion = int(item.recipe.portion.split(" ")[0])
 
-            if item.ingredient.name in total_ingredients and item.quantity_normalized is not None:
-                total_ingredients[item.ingredient.name] = total_ingredients[
-                                                              item.ingredient.name] + (
-                                                                      item.quantity_normalized / portion)
+            ingredient_name = item.ingredient.name
+            if ingredient_name in total_ingredients and item.quantity_normalized is not None:
+                total_ingredients[ingredient_name]['quantity'] += item.quantity_normalized / portion
             else:
-                total_ingredients[item.ingredient.name] = item.quantity_normalized + (
-                            item.quantity_normalized / portion)
-        # response data
+                total_ingredients[ingredient_name] = {
+                    "name": ingredient_name,
+                    "quantity": item.quantity_normalized / portion,
+                    "units": item.units_normalized
+                }
 
-        response_holder["result"] = total_ingredients
+        response_holder["result"] = [CalenderIngredient().load(ingredient) for ingredient in total_ingredients.values()]
+
+        # response data
 
         log.info("Finish GET /follow/list")
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")

@@ -52,10 +52,10 @@ def normalize_quantity(quantity_original):
 
 def parse_date(date_str):
     try:
-        date_obj = datetime.strptime(date_str, "%d/%m/%Y")
+        date_obj = datetime.strptime(date_str, "%d/%m/%YT%H:%M:%S")
         return date_obj
     except ValueError:
-        raise ValueError("Invalid date format. Please use 'dd/mm/yyyy' format.")
+        raise ValueError("Invalid date format. Please use 'DD/MM/YYYYThh:mm:ss' format.")
 
 
 def add_days(date_obj, days):

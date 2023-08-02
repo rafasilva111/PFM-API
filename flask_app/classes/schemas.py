@@ -379,7 +379,7 @@ class CalendarEntrySchema(ma.Schema):
     tag = fields.String(validate=lambda x: x in CALENDER_ENTRY_TAG_SET, required=True, null=False)
     created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S')
     realization_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S', required=True)
-    checked_done = fields.Boolean(default=0,dump_only=True)
+    checked_done = fields.Boolean(default=0, dump_only=True)
 
     class Meta:
         ordered = True
@@ -392,6 +392,15 @@ class CalendarEntrySchema(ma.Schema):
 class LoginSchema(ma.Schema):
     email = fields.Email(required=True)
     password = fields.Str(required=True)
+
+    class Meta:
+        unknown = EXCLUDE
+
+
+class CalenderIngredient(ma.Schema):
+    name = fields.Str(required=True)
+    quantity = fields.Integer(required=True)
+    units = fields.Str(required=True)
 
     class Meta:
         unknown = EXCLUDE
