@@ -27,6 +27,7 @@ class ReconectMySQLDatabase(ReconnectMixin, MySQLDatabase, ABC):
 db = ReconectMySQLDatabase(database=database, user=db_user, password=db_password,
                            host=host)
 
+
 class UNITS_TYPE(Enum):
     GRAMS = "G"
     UNITS = "U"
@@ -80,7 +81,7 @@ class User(BaseModel):
     email = CharField(unique=True, null=False)
     password = CharField(null=False)
 
-    description = CharField(default="") #max length 255
+    description = CharField(default="")  # max length 255
 
     profile_type = CharField(default="PRIVATE")  # (protect, private, public)
     verified = BooleanField(default=False)
@@ -104,6 +105,15 @@ class User(BaseModel):
         return check_password_hash(self.password, password)
 
 
+class FollowRequest(BaseModel):
+    follower = ForeignKeyField(User, backref='followers')
+    followed = ForeignKeyField(User, backref='followeds')
+    state = BooleanField(default=False)
+
+    class Meta:
+        db_table = 'follow_request'
+
+
 class Follow(BaseModel):
     follower = ForeignKeyField(User, backref='followers')
     followed = ForeignKeyField(User, backref='followeds')
@@ -120,13 +130,15 @@ class NutritionInformation(BaseModel):
     gordura_saturada = CharField()
     gordura_saturada_perc = CharField()
     hidratos_carbonos = CharField()
-    hidratos_carbonos_perc = CharField(null=True) ## TODO depois de o hugo fazer os calculos automaticos remover null=True
+    hidratos_carbonos_perc = CharField(
+        null=True)  ## TODO depois de o hugo fazer os calculos automaticos remover null=True
     hidratos_carbonos_acucares = CharField()
-    hidratos_carbonos_acucares_perc = CharField(null=True) ## TODO depois de o hugo fazer os calculos automaticos remover null=True
+    hidratos_carbonos_acucares_perc = CharField(
+        null=True)  ## TODO depois de o hugo fazer os calculos automaticos remover null=True
     fibra = CharField()
     fibra_perc = CharField()
     proteina = CharField()
-    proteina_perc = CharField(null=True) ## TODO depois de o hugo fazer os calculos automaticos remover null=True
+    proteina_perc = CharField(null=True)  ## TODO depois de o hugo fazer os calculos automaticos remover null=True
 
     class Meta:
         db_table = 'nutrition_information'
@@ -145,8 +157,8 @@ class Recipe(BaseModel):
     views = IntegerField(default=0, null=False)
     preparation = BlobField(null=False)
 
-    created_by = ForeignKeyField(User, backref="created_by")
-    nutrition_information = ForeignKeyField(NutritionInformation, backref='recipe',null=True,on_delete='CASCADE')
+    created_by = ForeignKeyField(User, backref="created_recipes")
+    nutrition_information = ForeignKeyField(NutritionInformation, backref='recipe', null=True, on_delete='CASCADE')
 
     rating = FloatField(default=0.0)
     source_rating = FloatField(null=True)

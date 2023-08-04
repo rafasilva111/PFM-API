@@ -57,9 +57,8 @@ class RecipeListResource(Resource):
         # Get args
         args = parser.parse_args()
 
-        user_id = args['user_id']  # todo falta procura por user_id
-        page = int(args['page']) if args['page'] else 1
-        page_size = int(args['page_size']) if args['page_size'] else 5
+        page = args['page'] if args['page'] else 1
+        page_size = args['page_size'] if args['page_size'] else 5
         by = str(args['by']) if args['by'] and args['by'] in RECIPES_SORTING_TYPE_SET else None
 
         # validate args
@@ -80,8 +79,17 @@ class RecipeListResource(Resource):
 
             query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
                 .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string']))
+        elif args['user_id']:
+
+            # validate if client profile is public
+            try:
+                user = UserDB.get_by_id(args['user_id'])
+            except peewee.DoesNotExist:
+                return Response(status=400, response="There is no user whit that id.")
+
+            query = RecipeDB.select().where(RecipeDB.created_by == user)
         else:
-        # pesquisa normal
+            # pesquisa normal
             query = RecipeDB.select()
 
         # Check if sorted
@@ -89,7 +97,7 @@ class RecipeListResource(Resource):
         if by:
             if by == RECIPES_SORTING_TYPE.DATE.value:
 
-                 query = query.order_by(RecipeDB.created_date)
+                query = query.order_by(RecipeDB.created_date)
 
             elif by == RECIPES_SORTING_TYPE.RANDOM.value:
 
@@ -125,7 +133,8 @@ class RecipeListResource(Resource):
                                   .alias('saves'))
 
                 query = RecipeDB.select(RecipeDB, likes_subquery).distinct().join(RecipeTagThroughDB).join(TagDB) \
-                    .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string'])).order_by(peewee.SQL('saves').desc())
+                    .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string'])).order_by(
+                    peewee.SQL('saves').desc())
 
             elif by == RECIPES_SORTING_TYPE.SAVES.value:
 
@@ -138,7 +147,6 @@ class RecipeListResource(Resource):
                 query = (RecipeDB
                          .select(RecipeDB, saves_subquery)
                          .order_by(peewee.SQL('saves').desc()))
-
 
         # metadata
 
@@ -307,7 +315,8 @@ class RecipeResource(Resource):
                             return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
 
                     ingredient_quantity = IngredientQuantity(quantity_original=i['quantity_original'],
-                                                             quantity_normalized=quantity_normalized,units_normalized=units_normalized)
+                                                             quantity_normalized=quantity_normalized,
+                                                             units_normalized=units_normalized)
                     ingredient_quantity.ingredient = ingredient
                     ingredient_quantity.recipe = recipe
                     ingredient_quantity.save()
@@ -1032,7 +1041,6 @@ class RecipeListResource(Resource):
             return Response(status=403, response="User is not a company.")
 
         # Validate args by loading it into schema
-
 
         nutrition_table = json_data.pop('nutrition_information')
 

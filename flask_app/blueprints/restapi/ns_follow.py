@@ -8,7 +8,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from flask_restx import Namespace, Resource
 from playhouse.shortcuts import model_to_dict
 
-from ...classes.models import TokenBlocklist,Comment as CommentDB,Follow as FollowDB,User as UserDB
+from ...classes.models import TokenBlocklist, Comment as CommentDB, Follow as FollowDB, User as UserDB, PROFILE_TYPE, \
+    FollowRequest
 from ...classes.schemas import CommentSchema, FollowedsSchema, FollowersSchema,build_metadata
 from ...ext.logger import log
 
@@ -22,6 +23,7 @@ parser.add_argument('page', type=int, help='The page number.')
 parser.add_argument('page_size', type=int, help='The page size.')
 parser.add_argument('id', type=int, help='The id to be search.')
 parser.add_argument('user_id', type=int, help='The user id to be search.')
+parser.add_argument('follow_request_id', type=int, help='The user id to be search.')
 
 ENDPOINT = "/follow"
 
@@ -259,7 +261,7 @@ class FollowResource(Resource):
 
     @jwt_required()
     def post(self):
-        """ Post a comment by user """
+        """ Post a follow by user """
 
         log.info("POST /follow")
 
@@ -305,20 +307,24 @@ class FollowResource(Resource):
 
         # fills comment object
 
-        follow, created = FollowDB.get_or_create(follower=user, followed=user_to_be_followed)
+        if user_to_be_followed.profile_type == PROFILE_TYPE.PRIVATE.value:
+            follow_request, created = FollowRequest.get_or_create(follower=user, followed=user_to_be_followed)
+            if not created:
+                log.error("User already follows this account.")
+                return Response(status=200, response="User already follows this account.")
 
-        if not created:
-            log.error("User already follows this account.")
-            return Response(status=200, response="User already follows this account.")
+            log.info("Finish POST /follow")
+
+        else:
+            follow, created = FollowDB.get_or_create(follower=user, followed=user_to_be_followed)
+
+            if not created:
+                log.error("User already follows this account.")
+                return Response(status=200, response="User already follows this account.")
 
         log.info("Finish POST /follow")
+
         return Response(status=201)
-
-    @jwt_required()
-    def put(self):
-        """Put a comment by ID"""
-
-        return Response(status=202)
 
     @jwt_required()
     def delete(self):
@@ -365,3 +371,68 @@ class FollowResource(Resource):
 
         log.info("Finish DELETE /follow")
         return Response(status=200)
+
+
+@api.route("/accept")
+@api.doc("Follow partial")
+class FollowAcceptResource(Resource):
+
+    @jwt_required()
+    def post(self):
+        """ Post a follow by user """
+
+        log.info("POST /follow")
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # Get args
+
+        args = parser.parse_args()
+
+        follow_request_id = args['follow_request_id']
+
+        # Validate args
+
+        if not follow_request_id:
+            log.error("Missing arguments...")
+            return Response(status=400, response="Missing arguments...")
+
+
+        # Verify existence of the requested ids model's
+
+        try:
+            follow_request = FollowRequest.get(FollowRequest.followed== user_id & FollowRequest.id == follow_request_id)
+        except peewee.DoesNotExist:
+            log.error("Follow request, couln't be found.")
+            return Response(status=400, response="User to be followed, couln't be found.")
+
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and stil reach this far)
+            # this only occurs when accounts are not in db
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            log.error("User couln't be found.")
+            return Response(status=400, response="User couln't be found.")
+
+        # fills comment object
+
+        follow = FollowDB.create(follower=follow_request.follower, followed=follow_request.followed)
+        follow.save()
+
+
+        # delete the request
+
+        follow_request.delete_instance()
+
+
+
+
+        log.info("Finish POST /follow")
+
+        return Response(status=201)

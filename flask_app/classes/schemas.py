@@ -375,11 +375,21 @@ class CommentSchema(ma.Schema):
 class CalendarEntrySchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     user = fields.Nested(UserSimpleSchema, required=True, dump_only=True)
-    recipe = fields.Nested(RecipeSimpleSchema, required=True, dump_only=True)
-    tag = fields.String(validate=lambda x: x in CALENDER_ENTRY_TAG_SET, required=True, null=False)
-    created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S')
-    realization_date = fields.DateTime(format='%Y-%m-%dT%H:%M:%S', required=True)
-    checked_done = fields.Boolean(default=0, dump_only=True)
+    recipe = fields.Nested(RecipeSchema, required=True, dump_only=True)
+    tag = fields.String(validate=lambda x: x in CALENDER_ENTRY_TAG_SET, required=True)
+    created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
+    realization_date = fields.DateTime(format='%d/%m/%YT%H:%M:%S', required=True)
+    checked_done = fields.Boolean(default=False, dump_only=True)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+
+class CalendarEntryPacthSchema(ma.Schema):
+    tag = fields.String(validate=lambda x: x in CALENDER_ENTRY_TAG_SET, allow_none = True, required=False)
+    realization_date = fields.DateTime(format='%d/%m/%YT%H:%M:%S', allow_none = True, required=False)
+    checked_done = fields.Boolean(allow_none = True,required=False)
 
     class Meta:
         ordered = True

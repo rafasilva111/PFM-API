@@ -12,8 +12,9 @@ from playhouse.shortcuts import model_to_dict
 from ...classes.functions import parse_date, add_days
 from ...classes.models import Recipe as RecipeDB, Comment as CommentDB, Follow as FollowDB, User as UserDB, \
     CalendarEntry, TokenBlocklist, IngredientQuantity, Recipe
-from ...classes.schemas import CommentSchema, FollowedsSchema, FollowersSchema, build_metadata, CalendarEntrySchema, \
-    CalenderIngredient
+from ...classes.schemas import CommentSchema, FollowedsSchema, FollowersSchema, build_metadata, \
+    CalendarEntryPacthSchema, \
+    CalenderIngredient, CalendarEntrySchema
 from ...ext.logger import log
 
 # Create name space
@@ -93,7 +94,7 @@ class CalendarListResource(Resource):
                 if date_string not in date_to_entries:
                     date_to_entries[date_string] = []
                 date_to_entries[date_string].append(
-                    CalendarEntrySchema().dump(model_to_dict(item, backrefs=True, recurse=True, manytomany=True)))
+                    CalendarEntryPacthSchema().dump(model_to_dict(item, backrefs=True, recurse=True, manytomany=True)))
 
             ## fills list whit empty arrays
             response_holder["result"] = {}
@@ -215,7 +216,7 @@ class CalendarResource(Resource):
         try:
             comment_record = CalendarEntry.get(id=args["id"])
             comment_model = model_to_dict(comment_record, backrefs=True, recurse=True)
-            comment_schema = CalendarEntrySchema().dump(comment_model)
+            comment_schema = CalendarEntryPacthSchema().dump(comment_model)
         except peewee.DoesNotExist:
             log.error("Recipe does not exist...")
             return Response(status=400, response="Recipe does not exist...")
@@ -252,7 +253,7 @@ class CalendarResource(Resource):
         # Validate json body by loading it into schema
 
         try:
-            calendar_entry_validated = CalendarEntrySchema().load(json_data)
+            calendar_entry_validated = CalendarEntryPacthSchema().load(json_data)
         except ValidationError as err:
             log.error("Invalid arguments...")
             return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
@@ -287,6 +288,59 @@ class CalendarResource(Resource):
         log.info("Finish POST /calendar")
 
         return Response(status=201)
+
+    @jwt_required()
+    def patch(self):
+        """Patch a user by ID"""
+
+        log.info("PATCH /user")
+
+        # Get args
+
+        args = parser.parse_args()
+
+        calender_entry_id = args['id']
+
+        # gets user auth id
+        user_id = get_jwt_identity()
+
+        # check if user exists
+        try:
+            calender_entry_patch = CalendarEntry.get(CalendarEntry.id == calender_entry_id & CalendarEntry.user == user_id)
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and still reach this far)
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            log.error("User couldn't be found by this id.")
+            return Response(status=400, response="User couldn't be found by this id.")
+
+        # get data from json
+        data = request.get_json()
+
+        # validate data through user schema
+        try:
+            calender_entry_validated = CalendarEntryPacthSchema().load(data)
+        except Exception as e:
+            log.error("Error validating user: " + str(e))
+            return Response(status=400, response="Error patching user: " + str(e))
+
+        for key, value in calender_entry_validated.items():
+            if value is not None:
+                if key == 'realization_date':  ## alterar apenas as horas
+                    helper_value = calender_entry_patch.realization_date.replace(hour=value.hour, minute=value.minute)
+                    setattr(calender_entry_patch, key, helper_value)
+                else:
+                    setattr(calender_entry_patch, key, value)
+
+        calender_entry_patch.save()
+
+        log.info("Finished PATCH /user")
+        return Response(status=200, response=json.dumps(
+            CalendarEntrySchema().dump(
+                model_to_dict(calender_entry_patch, backrefs=True, recurse=True, manytomany=True))),
+                        mimetype="application/json")
 
     @jwt_required()
     def delete(self):
