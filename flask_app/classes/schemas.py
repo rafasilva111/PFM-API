@@ -327,30 +327,6 @@ class UserPatchSchema(ma.Schema):
         return data
 
 
-class FollowersSchema(ma.Schema):
-    follower = fields.Dict(required=True, dump_only=True)
-    created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
-    updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
-
-    @pre_dump
-    def prepare_followed(self, data, **kwargs):
-        if 'follower' in data:
-            data['follower'] = UserSchema().dump(data['follower'])
-        return data
-
-
-class FollowedsSchema(ma.Schema):
-    followed = fields.Dict(required=True, dump_only=True)
-    created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
-    updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
-
-    @pre_dump
-    def prepare_user_and_recipe(self, data, **kwargs):
-        if 'followed' in data:
-            data['followed'] = UserSchema().dump(data['followed'])
-        return data
-
-
 class CommentSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     text = fields.String(required=True, null=False)

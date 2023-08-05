@@ -12,7 +12,7 @@ from playhouse.shortcuts import model_to_dict
 from ...classes.functions import parse_date, add_days
 from ...classes.models import Recipe as RecipeDB, Comment as CommentDB, Follow as FollowDB, User as UserDB, \
     CalendarEntry, TokenBlocklist, IngredientQuantity, Recipe
-from ...classes.schemas import CommentSchema, FollowedsSchema, FollowersSchema, build_metadata, \
+from ...classes.schemas import CommentSchema, build_metadata, \
     CalendarEntryPacthSchema, \
     CalenderIngredient, CalendarEntrySchema
 from ...ext.logger import log
@@ -306,7 +306,7 @@ class CalendarResource(Resource):
 
         # check if user exists
         try:
-            calender_entry_patch = CalendarEntry.get(CalendarEntry.id == calender_entry_id & CalendarEntry.user == user_id)
+            calender_entry_patch = CalendarEntry.get((CalendarEntry.id == calender_entry_id) & (CalendarEntry.user == user_id))
         except peewee.DoesNotExist:
             # Otherwise block user token (user cant be logged in and still reach this far)
             jti = get_jwt()["jti"]

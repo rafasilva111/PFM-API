@@ -10,7 +10,7 @@ from playhouse.shortcuts import model_to_dict
 
 from ...classes.models import TokenBlocklist, Comment as CommentDB, Follow as FollowDB, User as UserDB, PROFILE_TYPE, \
     FollowRequest
-from ...classes.schemas import CommentSchema, FollowedsSchema, FollowersSchema,build_metadata
+from ...classes.schemas import CommentSchema, build_metadata, UserSchema, UserSimpleSchema
 from ...ext.logger import log
 
 # Create name space
@@ -160,8 +160,8 @@ class FollowersResource(Resource):
 
         followers = []
         for item in query.paginate(page, page_size):
-            follower = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-            followers.append(FollowersSchema().dump(follower))
+            follow_model = model_to_dict(item.follower)
+            followers.append(UserSimpleSchema().dump(follow_model))
 
         response_holder["result"] = followers
 
@@ -217,8 +217,8 @@ class FollowersResource(Resource):
 
         followers = []
         for item in query.paginate(page, page_size):
-            follow = model_to_dict(item, backrefs=True)
-            followers.append(FollowedsSchema().dump(follow))
+            follow = model_to_dict(item.followed)
+            followers.append(UserSimpleSchema().dump(follow))
 
         response_holder["result"] = followers
 
