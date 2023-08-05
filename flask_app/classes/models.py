@@ -27,6 +27,14 @@ class ReconectMySQLDatabase(ReconnectMixin, MySQLDatabase, ABC):
 db = ReconectMySQLDatabase(database=database, user=db_user, password=db_password,
                            host=host)
 
+class FOLLOWED_STATE_SET(Enum):
+    FOLLOWED = "F"
+    NOT_FOLLOWED = "NF"
+    PENDING_FOLLOWED = "PF"
+
+
+USER_TYPE_SET = FOLLOWED_STATE_SET._value2member_map_
+
 
 class UNITS_TYPE(Enum):
     GRAMS = "G"
@@ -106,17 +114,16 @@ class User(BaseModel):
 
 
 class FollowRequest(BaseModel):
-    follower = ForeignKeyField(User, backref='followers')
-    followed = ForeignKeyField(User, backref='followeds')
-    state = BooleanField(default=False)
+    follower = ForeignKeyField(User, backref='followers_request')
+    followed = ForeignKeyField(User, backref='followeds_request')
 
     class Meta:
         db_table = 'follow_request'
 
 
 class Follow(BaseModel):
-    follower = ForeignKeyField(User, backref='followers')
-    followed = ForeignKeyField(User, backref='followeds')
+    follower = ForeignKeyField(User, backref='followeds')
+    followed = ForeignKeyField(User, backref='followers')
 
 
 ''' Recipe '''

@@ -9,8 +9,8 @@ from flask_restx import Namespace, Resource
 from playhouse.shortcuts import model_to_dict
 
 from ...classes.models import TokenBlocklist, Comment as CommentDB, Follow as FollowDB, User as UserDB, PROFILE_TYPE, \
-    FollowRequest
-from ...classes.schemas import CommentSchema, build_metadata, UserSchema, UserSimpleSchema
+    FollowRequest as FollowRequestDB
+from ...classes.schemas import CommentSchema, build_metadata, UserSimpleSchema
 from ...ext.logger import log
 
 # Create name space
@@ -308,7 +308,7 @@ class FollowResource(Resource):
         # fills comment object
 
         if user_to_be_followed.profile_type == PROFILE_TYPE.PRIVATE.value:
-            follow_request, created = FollowRequest.get_or_create(follower=user, followed=user_to_be_followed)
+            follow_request, created = FollowRequestDB.get_or_create(follower=user, followed=user_to_be_followed)
             if not created:
                 log.error("User already follows this account.")
                 return Response(status=200, response="User already follows this account.")
@@ -328,7 +328,7 @@ class FollowResource(Resource):
 
     @jwt_required()
     def delete(self):
-        """Delete a comment by ID"""
+        """Delete a follow by ID"""
 
         log.info("DELETE /follow")
 
@@ -352,7 +352,7 @@ class FollowResource(Resource):
         # delete by referencing the user id
         if user_id:
             try:
-                follow = FollowDB.get(FollowDB.followed==user_id)
+                follow = FollowDB.get(FollowDB.followed == user_id)
             except peewee.DoesNotExist:
                 log.error("User does not follow referenced account.")
                 return Response(status=400, response="User does not follow referenced account.")
@@ -373,7 +373,7 @@ class FollowResource(Resource):
         return Response(status=200)
 
 
-@api.route("/accept")
+@api.route("/requests")
 @api.doc("Follow partial")
 class FollowAcceptResource(Resource):
 
@@ -381,7 +381,7 @@ class FollowAcceptResource(Resource):
     def post(self):
         """ Post a follow by user """
 
-        log.info("POST /follow")
+        log.info("POST /requests")
 
         # gets user auth id
 
@@ -399,40 +399,117 @@ class FollowAcceptResource(Resource):
             log.error("Missing arguments...")
             return Response(status=400, response="Missing arguments...")
 
-
         # Verify existence of the requested ids model's
 
         try:
-            follow_request = FollowRequest.get(FollowRequest.followed== user_id & FollowRequest.id == follow_request_id)
+            follow_request = FollowRequestDB.get(
+                (FollowRequestDB.followed == user_id) & (FollowRequestDB.id == follow_request_id))
         except peewee.DoesNotExist:
             log.error("Follow request, couln't be found.")
             return Response(status=400, response="User to be followed, couln't be found.")
-
-        try:
-            user = UserDB.get(user_id)
-        except peewee.DoesNotExist:
-            # Otherwise block user token (user cant be logged in and stil reach this far)
-            # this only occurs when accounts are not in db
-            jti = get_jwt()["jti"]
-            now = datetime.now(timezone.utc)
-            token_block_record = TokenBlocklist(jti=jti, created_at=now)
-            token_block_record.save()
-            log.error("User couln't be found.")
-            return Response(status=400, response="User couln't be found.")
 
         # fills comment object
 
         follow = FollowDB.create(follower=follow_request.follower, followed=follow_request.followed)
         follow.save()
 
-
         # delete the request
 
         follow_request.delete_instance()
 
-
-
-
-        log.info("Finish POST /follow")
+        log.info("Finish POST /requests")
 
         return Response(status=201)
+
+    @jwt_required()
+    def delete(self):
+        """Delete a follow by ID"""
+
+        log.info("DELETE /requests")
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # Get args
+
+        args = parser.parse_args()
+
+        id = args['id'] if args['id'] else None
+
+        # Validate args
+
+        if not id and not user_id:
+            log.error("Missing arguments...")
+            return Response(status=400, response="Missing arguments...")
+
+        # delete by referencing the user id
+
+        try:
+            follow = FollowRequestDB.get((FollowRequestDB.id == id) & (FollowRequestDB.followed == user_id))
+        except peewee.DoesNotExist:
+            log.error("User does not follow referenced account.")
+            return Response(status=400, response="User does not follow referenced account.")
+
+        follow.delete_instance()
+
+        log.info("Finish DELETE /requests")
+        return Response(status=200)
+
+
+@api.route("/requests/list")
+@api.doc("Follow partial")
+class FollowAcceptResource(Resource):
+
+    @jwt_required()
+    def get(self):
+        """List all follow request"""
+
+        log.info("GET /accept/list")
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # Get args
+
+        args = parser.parse_args()
+
+        page = args['page'] if args['page'] else 1
+        page_size = args['page_size'] if args['page_size'] else 5
+
+        # validate args
+
+        if page <= 0:
+            log.error("page cant be negative")
+            return Response(status=400, response="page cant be negative")
+        if page_size not in [5, 10, 20, 40]:
+            log.error("page_size not in [5, 10, 20, 40]")
+            return Response(status=400, response="page_size not in [5, 10, 20, 40]")
+
+        # declare response holder
+
+        response_holder = {}
+
+        # build query
+
+        query = FollowRequestDB.select().where(FollowRequestDB.followed == user_id)
+
+        # metadata
+
+        total_followers = int(query.count())
+        total_pages = math.ceil(total_followers / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_followers, ENDPOINT)
+        response_holder["_metadata"] = metadata
+
+        # response data
+
+        followers = []
+        for item in query.paginate(page, page_size):
+            follow_model = model_to_dict(item.follower)
+            followers.append(UserSimpleSchema().dump(follow_model))
+
+        response_holder["result"] = followers
+
+        log.info("Finish GET /accept/list")
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")

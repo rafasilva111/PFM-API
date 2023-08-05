@@ -3,6 +3,9 @@ import re
 from flask_bcrypt import generate_password_hash
 from marshmallow import fields, validates, pre_dump, pre_load, EXCLUDE
 from enum import Enum
+
+from marshmallow_sqlalchemy import ModelConverter
+
 from flask_app.ext.schema import ma
 
 from flask_app.classes.models import *
@@ -142,6 +145,7 @@ class NutritionInformationSchema(ma.Schema):
     class Meta:
         ordered = True
         unknown = EXCLUDE
+
 
 
 class RecipeSchema(ma.Schema):
@@ -327,6 +331,23 @@ class UserPatchSchema(ma.Schema):
         return data
 
 
+class UserPerfilSchema(ma.Schema):
+    id = fields.Integer(dump_only=True)
+    name = fields.String(required=True)
+    email = fields.Email(required=True)
+
+    description = fields.String(required=False)
+
+    profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE_SET)
+    verified = fields.Boolean()
+    user_type = fields.String(validate=lambda x: x in USER_TYPE_SET)
+    img_source = fields.String(default="")
+    followed_state = fields.String(validate=lambda x: x in FOLLOWED_STATE_SET)
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
 class CommentSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     text = fields.String(required=True, null=False)
@@ -363,9 +384,9 @@ class CalendarEntrySchema(ma.Schema):
 
 
 class CalendarEntryPacthSchema(ma.Schema):
-    tag = fields.String(validate=lambda x: x in CALENDER_ENTRY_TAG_SET, allow_none = True, required=False)
-    realization_date = fields.DateTime(format='%d/%m/%YT%H:%M:%S', allow_none = True, required=False)
-    checked_done = fields.Boolean(allow_none = True,required=False)
+    tag = fields.String(validate=lambda x: x in CALENDER_ENTRY_TAG_SET, allow_none=True, required=False)
+    realization_date = fields.DateTime(format='%d/%m/%YT%H:%M:%S', allow_none=True, required=False)
+    checked_done = fields.Boolean(allow_none=True, required=False)
 
     class Meta:
         ordered = True

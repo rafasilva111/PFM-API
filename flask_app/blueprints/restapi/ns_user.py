@@ -113,12 +113,18 @@ class UserListResource(Resource):
 @api.route("")
 class UserResource(Resource):
 
+    @jwt_required()
     def get(self):
         """ Get a user with ID """
 
         log.info("GET /user")
 
+        # gets user auth id
+
+        user_logged_id = get_jwt_identity()
+
         # get args
+
         args = parser.parse_args()
 
         id = args['id']
@@ -129,19 +135,46 @@ class UserResource(Resource):
             return Response(status=400, response="Missing user id argument.")
 
         try:
-            user = UserDB.get(id)
+            user = UserDB.get(id=id)
             log.info("Finished GET /user")
-            return Response(status=200, response=json.dumps(UserSchema().dump(user)), mimetype="application/json")
+
+
         except peewee.DoesNotExist:
             log.error("User couldn't be found by this id.")
             return Response(status=400, response="User couldn't be found by this id.")
+
+        user_model = model_to_dict(user, backrefs=True)
+
+        is_following = Follow.select(peewee.fn.COUNT(Follow.id)).where(
+            (Follow.follower == user_logged_id) & (Follow.followed == user)
+        ).scalar() > 0
+
+        if is_following:
+            user_model['followed_state'] = FOLLOWED_STATE_SET.FOLLOWED.value
+            return Response(status=200, response=json.dumps(UserPerfilSchema().dump(user_model)),
+                            mimetype="application/json")
+        is_pending = FollowRequest.select(peewee.fn.COUNT(FollowRequest.id)).where(
+            (FollowRequest.follower == user_logged_id) & (FollowRequest.followed == user)
+        ).scalar() > 0
+
+        if is_pending:
+            user_model['followed_state'] = FOLLOWED_STATE_SET.PENDING_FOLLOWED.value
+            return Response(status=200, response=json.dumps(UserPerfilSchema().dump(user_model)),
+                            mimetype="application/json")
+
+        user_model['followed_state'] = FOLLOWED_STATE_SET.NOT_FOLLOWED.value
+
+        return Response(status=200, response=json.dumps(UserPerfilSchema().dump(user_model)),
+                        mimetype="application/json")
 
     @jwt_required()
     def delete(self):
         """Delete a user by ID"""
 
         log.info("DELETE /user")
+
         # gets user auth id
+
         user_logged_id = get_jwt_identity()
 
         # check if user exists
