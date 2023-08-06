@@ -269,19 +269,6 @@ class RecipeResource(Resource):
         # because to build these last one recipe needs to already have an id, wich is done by save()
         recipe.save()
 
-        # build relation to recipe_background
-
-        try:
-            recipe_background = RecipeBackgroundDB()
-            recipe_background.user = user
-            recipe_background.recipe = recipe
-            recipe_background.type = "CREATED"
-            recipe_background.save()
-        except Exception as e:
-            recipe.delete_instance(recursive=True)
-            log.error("Recipe Background Table has some error...")
-            return Response(status=400, response="Recipe Background Table has some error.\n" + str(e))
-
         # build multi to multi relation to tags
 
         try:

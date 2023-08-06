@@ -1,5 +1,7 @@
 import json
 import re
+
+import peewee
 from flask_bcrypt import generate_password_hash
 from marshmallow import fields, validates, pre_dump, pre_load, EXCLUDE
 from enum import Enum
@@ -147,7 +149,6 @@ class NutritionInformationSchema(ma.Schema):
         unknown = EXCLUDE
 
 
-
 class RecipeSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     title = fields.String(required=True)
@@ -252,6 +253,12 @@ class UserSchema(ma.Schema):
     email = fields.Email(required=True)
     password = fields.String(load_only=True)
 
+    followers = fields.Integer(dump_only=True, default=0)
+    followeds = fields.Integer(dump_only=True, default=0)
+
+    followers_request = fields.Integer(dump_only=True, default=0)
+    followeds_request = fields.Integer(dump_only=True, default=0)
+
     description = fields.String(required=False)
     rating = fields.Float(default=0.0)
 
@@ -292,17 +299,21 @@ class UserSchema(ma.Schema):
 
     @pre_dump()
     def recipes(self, data, **kwargs):
+
+        data['followers'] = len(data['followers'])
+        data['followeds'] = len(data['followeds'])
+
+        data['followers_request'] = len(data['followers_request'])
+        data['followeds_request'] = len(data['followeds_request'])
+
         if 'recipes' in data:
             data['liked_recipes'] = []
             data['saved_recipes'] = []
-            data['created_recipes'] = []
             for r in data['recipes']:
                 if r['type'] == RECIPES_BACKGROUND_TYPE_LIKED:
                     data['liked_recipes'].append(r['recipe'])
                 elif r['type'] == RECIPES_BACKGROUND_TYPE_SAVED:
                     data['saved_recipes'].append(r['recipe'])
-                elif r['type'] == RECIPES_BACKGROUND_TYPE_CREATED:
-                    data['created_recipes'].append(r['recipe'])
             data.pop('recipes')
 
         return data
@@ -331,10 +342,16 @@ class UserPatchSchema(ma.Schema):
         return data
 
 
+
+
+
 class UserPerfilSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     name = fields.String(required=True)
     email = fields.Email(required=True)
+
+    followers = fields.Integer(dump_only=True, default=0)
+    followeds = fields.Integer(dump_only=True, default=0)
 
     description = fields.String(required=False)
 
@@ -347,6 +364,15 @@ class UserPerfilSchema(ma.Schema):
     class Meta:
         ordered = True
         unknown = EXCLUDE
+
+    @pre_dump()
+    def follows(self, data, **kwargs):
+
+        data['followers'] = len(data['followers'])
+        data['followeds'] = len(data['followeds'])
+
+        return data
+
 
 class CommentSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
