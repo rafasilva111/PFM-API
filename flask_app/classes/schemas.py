@@ -176,8 +176,8 @@ class RecipeSchema(ma.Schema):
     source_link = fields.String(required=False)
     company = fields.String(required=False)
 
-    created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
-    updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
+    created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S+00:00')
+    updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S+00:00')
 
     class Meta:
         ordered = True
@@ -222,8 +222,8 @@ class RecipeSimpleSchema(ma.Schema):
     tags = fields.List(fields.String(), required=True)
     created_by = fields.Nested(UserSimpleSchema, dump_only=True)
 
-    created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
-    updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
+    created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S+00:00')
+    updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S+00:00')
 
     class Meta:
         ordered = True
@@ -278,8 +278,8 @@ class UserSchema(ma.Schema):
     # todo apply this to schema like previous ones
     commented_recipes = fields.Nested(RecipeSchema, many=True, dump_only=True)
 
-    created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
-    updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
+    created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S+00:00')
+    updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S+00:00')
 
     class Meta:
         ordered = True
@@ -329,7 +329,7 @@ class UserPatchSchema(ma.Schema):
     height = fields.Float(required=False)
     weight = fields.Float(required=False)
     age = fields.Integer(dump_only=False, required=False)
-    updated_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
+    updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S+00:00')
     # patch by admin
     profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE_SET, required=False)
     verified = fields.Boolean(required=False)
@@ -379,8 +379,8 @@ class CommentSchema(ma.Schema):
     text = fields.String(required=True, null=False)
     user = fields.Dict(required=True, dump_only=True)
     recipe = fields.Dict(required=True, dump_only=True)
-    created_date = fields.DateTime(dump_only=True, format='%Y-%m-%dT%H:%M:%S+00:00')
-    updated_date = fields.DateTime(dump_only=False, format='%Y-%m-%dT%H:%M:%S+00:00')
+    created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S+00:00')
+    updated_date = fields.DateTime(dump_only=False, format='%d/%m/%YT%H:%M:%S+00:00')
 
     class Meta:
         ordered = True
