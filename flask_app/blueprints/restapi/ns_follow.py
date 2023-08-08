@@ -342,8 +342,8 @@ class FollowResource(Resource):
 
         args = parser.parse_args()
 
-        user_follower_id = args['user_follower_id'] if args['user_id'] else None
-        user_followed_id = args['user_followed_id'] if args['user_id'] else None
+        user_follower_id = args['user_follower_id'] if args['user_follower_id'] else None
+        user_followed_id = args['user_followed_id'] if args['user_followed_id'] else None
 
         # Validate args
 
@@ -393,7 +393,7 @@ class FollowAcceptResource(Resource):
 
         args = parser.parse_args()
 
-        follow_request_id = args['follow_request_id']
+        follow_request_id = args['follow_request_id'] if args['follow_request_id'] else None
 
         # Validate args
 

@@ -114,7 +114,7 @@ class UserSimpleSchema(ma.Schema):
 class RecipeBackgroundSimplifiedSchema(ma.Schema):
     id = fields.Integer(required=True)
     user = fields.Nested(UserSimpleSchema, required=True)
-    type = fields.String(required=True)
+    type = fields.String(validate=lambda x: x in RECIPES_BACKGROUND_TYPE_SET)
 
     class Meta:
         ordered = True
@@ -167,7 +167,6 @@ class RecipeSchema(ma.Schema):
     ingredients = fields.Nested(IngredientQuantitySchema, required=True, many=True)
     preparation = fields.Nested(PreparationSchema, required=True, many=True)
     nutrition_information = fields.Nested(NutritionInformationSchema)
-    backgrounds = fields.Nested(RecipeBackgroundSimplifiedSchema, required=True, many=True, dump_only=True)
     tags = fields.List(fields.String(), required=True)
     created_by = fields.Nested(UserSimpleSchema, dump_only=True)
 
@@ -190,7 +189,7 @@ class RecipeSchema(ma.Schema):
             data['preparation'] = json.loads(data['preparation'].decode().replace("\'", "\""))
 
         data['likes'] = RecipeBackground.select().where(
-            (RecipeBackground.recipe == data['id']) & (RecipeBackground.type == RECIPES_BACKGROUND_TYPE_LIKED)).count()
+            (RecipeBackground.recipe == data['id']) & (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value)).count()
 
         if 'tags' in data:
             data['tags'] = [a['title'] for a in data['tags']]
@@ -310,9 +309,9 @@ class UserSchema(ma.Schema):
             data['liked_recipes'] = []
             data['saved_recipes'] = []
             for r in data['recipes']:
-                if r['type'] == RECIPES_BACKGROUND_TYPE_LIKED:
+                if r['type'] == RECIPES_BACKGROUND_TYPE.LIKED.value:
                     data['liked_recipes'].append(r['recipe'])
-                elif r['type'] == RECIPES_BACKGROUND_TYPE_SAVED:
+                elif r['type'] == RECIPES_BACKGROUND_TYPE.SAVED.value:
                     data['saved_recipes'].append(r['recipe'])
             data.pop('recipes')
 

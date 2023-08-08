@@ -107,7 +107,7 @@ class RecipeListResource(Resource):
                 likes_subquery = (RecipeBackground
                                   .select(peewee.fn.COUNT(RecipeBackground.id))
                                   .where((RecipeBackground.recipe == RecipeDB.id) &
-                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE_LIKED))
+                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value))
                                   .alias('likes'))
 
                 query = (RecipeDB
@@ -118,7 +118,7 @@ class RecipeListResource(Resource):
                 likes_subquery = (RecipeBackground
                                   .select(peewee.fn.COUNT(RecipeBackground.id))
                                   .where((RecipeBackground.recipe == RecipeDB.id) &
-                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE_LIKED))
+                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value))
                                   .alias('likes'))
 
                 query = (RecipeDB
@@ -129,7 +129,7 @@ class RecipeListResource(Resource):
                 likes_subquery = (RecipeBackground
                                   .select(peewee.fn.COUNT(RecipeBackground.id))
                                   .where((RecipeBackground.recipe == RecipeDB.id) &
-                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE_SAVED))
+                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value))
                                   .alias('saves'))
 
                 query = RecipeDB.select(RecipeDB, likes_subquery).distinct().join(RecipeTagThroughDB).join(TagDB) \
@@ -141,7 +141,7 @@ class RecipeListResource(Resource):
                 saves_subquery = (RecipeBackground
                                   .select(peewee.fn.COUNT(RecipeBackground.id))
                                   .where((RecipeBackground.recipe == RecipeDB.id) &
-                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE_SAVED))
+                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.SAVED.value))
                                   .alias('saves'))
 
                 query = (RecipeDB
@@ -483,9 +483,7 @@ class RecipeListBackgroundSortResource(Resource):
 
         page = int(args['page']) if args['page'] else 1
         page_size = int(args['page_size']) if args['page_size'] else 5
-        by = f"'{str(args['by'])}'" if args['by'] and args['by'] in [RECIPES_BACKGROUND_TYPE_LIKED,
-                                                                     RECIPES_BACKGROUND_TYPE_SAVED,
-                                                                     RECIPES_BACKGROUND_TYPE_CREATED] else None
+        by = f"'{str(args['by'])}'" if args['by'] and args['by'] in RECIPES_BACKGROUND_TYPE_SET else None
 
         # validate args
 
@@ -608,7 +606,7 @@ class RecipeLikeResource(Resource):
         # add like
 
         recipe_background, created = RecipeBackgroundDB.get_or_create(user=user, recipe=recipe_to_be_liked,
-                                                                      type=RECIPES_BACKGROUND_TYPE_LIKED)
+                                                                      type=RECIPES_BACKGROUND_TYPE.LIKED.value)
 
         if not created:
             log.error("User already liked this recipe.")
@@ -663,7 +661,7 @@ class RecipeLikeResource(Resource):
         query = RecipeBackgroundDB.delete() \
             .where(
             ((RecipeBackgroundDB.recipe == like_to_be_deleted_id) & (RecipeBackgroundDB.user == user_id)) & (
-                    RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_LIKED)).execute()
+                    RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE.LIKED.value)).execute()
 
         if query != 1:
             log.error("User does not like this recipe.")
@@ -711,7 +709,7 @@ class RecipeLikesResource(Resource):
         RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB)
 
         query = RecipeDB.select(RecipeDB).distinct().join(RecipeBackgroundDB).join(UserDB) \
-            .where(UserDB.id == user_id, RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_LIKED)
+            .where(UserDB.id == user_id, RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE.LIKED.value)
 
         # metadata
 
@@ -802,7 +800,7 @@ class RecipeSaveResource(Resource):
         # fills comment object
 
         recipe_background, created = RecipeBackgroundDB.get_or_create(user=user, recipe=recipe_to_be_liked,
-                                                                      type=RECIPES_BACKGROUND_TYPE_SAVED)
+                                                                      type=RECIPES_BACKGROUND_TYPE.SAVED.value)
 
         if not created:
             log.error("User already saved this recipe.")
@@ -841,7 +839,7 @@ class RecipeSaveResource(Resource):
         RecipeBackgroundDB.delete() \
             .where(
             ((RecipeBackgroundDB.recipe == like_to_be_deleted_id) & (RecipeBackgroundDB.user == user_id)) & (
-                    RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_SAVED)).execute()
+                    RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE.SAVED.value)).execute()
 
         log.info("Finished DELETE /save")
         return Response(status=204)
@@ -885,7 +883,7 @@ class RecipeSavesResource(Resource):
         RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB)
 
         query = RecipeDB.select(RecipeDB).distinct().join(RecipeBackgroundDB).join(UserDB) \
-            .where(UserDB.id == user_id, RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_SAVED)
+            .where(UserDB.id == user_id, RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE.SAVED.value)
 
         # metadata
 
@@ -969,8 +967,7 @@ class RecipeCreatesResource(Resource):
         # query
         RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB)
 
-        query = RecipeDB.select(RecipeDB).distinct().join(RecipeBackgroundDB).join(UserDB) \
-            .where(UserDB.id == user_id, RecipeBackgroundDB.type == RECIPES_BACKGROUND_TYPE_CREATED)
+        query = RecipeDB.select(RecipeDB).distinct().where(RecipeDB.created_by == user_id)
 
         # metadata
 

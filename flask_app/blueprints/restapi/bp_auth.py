@@ -8,8 +8,8 @@ from peewee import DoesNotExist
 from playhouse.shortcuts import model_to_dict
 
 from flask_app.ext.database import db
-from ...classes.models import Recipe,TokenBlocklist,User as UserDB
-from ...classes.schemas import LoginSchema,RecipeSchema,UserSchema
+from ...classes.models import Recipe, TokenBlocklist, User as UserDB, RECIPES_BACKGROUND_TYPE
+from ...classes.schemas import LoginSchema, RecipeSchema, UserSchema
 from datetime import date
 from ...ext.logger import log
 
@@ -63,7 +63,6 @@ def login_user():
         log.error("Password incorrect.")
         return Response(status=400, response={'Password incorrect.'})
 
-
     # create new
 
     expires = timedelta(days=7)
@@ -106,7 +105,7 @@ def register_user():
         # calculate age
         today = date.today()
         user.age = today.year - data['birth_date'].year - (
-                    (today.month, today.day) < (data['birth_date'].month, data['birth_date'].day))
+                (today.month, today.day) < (data['birth_date'].month, data['birth_date'].day))
     except Exception as e:
         log.error(e)
         return Response(status=400, response=json.dumps(e), mimetype="application/json")
@@ -150,7 +149,6 @@ def get_user_session():
 @auth_blueprint.route("/logout", methods=["DELETE"])
 @jwt_required()
 def logout():
-
     log.info("DELETE /auth/logout")
 
     jti = get_jwt()["jti"]
@@ -160,3 +158,45 @@ def logout():
 
     log.info("DELETE /auth/logout")
     return Response(status=204)
+
+
+@auth_blueprint.route('/recipes', methods=['GET'])
+@jwt_required()
+def get_recipes_user_session():
+    # gets user auth id
+
+    log.info("GET /auth")
+    user_id = get_jwt_identity()
+
+    # query
+    try:
+        user_record = UserDB.get(user_id)
+    except DoesNotExist as e:
+        # Otherwise block user token (user cant be logged in and stil reach this far)
+        # this only occurs when accounts are not in db
+        jti = get_jwt()["jti"]
+        now = datetime.now(timezone.utc)
+        token_block_record = TokenBlocklist(jti=jti, created_at=now)
+        token_block_record.save()
+        log.error("User couln't be found.")
+        return Response(status=400, response="User couln't be found.")
+
+    created = []
+    liked = []
+    saved = []
+
+    recipe_schema = RecipeSchema()
+
+    for item in user_record.recipes:
+        if item.type == RECIPES_BACKGROUND_TYPE.LIKED.value:
+            liked.append(recipe_schema.dump(model_to_dict(item.recipe, manytomany=True)))
+        if item.type == RECIPES_BACKGROUND_TYPE.SAVED.value:
+            saved.append(recipe_schema.dump(model_to_dict(item.recipe, manytomany=True)))
+
+    for item in user_record.created_recipes:
+        created.append(recipe_schema.dump(model_to_dict(item, backrefs=True, manytomany=True)))
+
+    response_holder = {"result": {'recipes_created': created, 'recipes_liked': liked, 'recipes_saved': saved}}
+
+    log.info("GET /auth")
+    return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")

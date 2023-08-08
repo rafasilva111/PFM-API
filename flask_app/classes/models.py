@@ -15,9 +15,12 @@ db_password = os.environ.get('MYSQL_ROOT_PASSWORD') if os.environ.get('MYSQL_ROO
 database = os.environ.get('MYSQL_DATABASE') if os.environ.get('MYSQL_DATABASE') else "flask_api"
 host = os.environ.get('MYSQL_HOST') if os.environ.get('MYSQL_HOST') else "localhost"
 
-RECIPES_BACKGROUND_TYPE_LIKED = "LIKED"
-RECIPES_BACKGROUND_TYPE_SAVED = "SAVED"
-RECIPES_BACKGROUND_TYPE_CREATED = "CREATED"
+class RECIPES_BACKGROUND_TYPE(Enum):
+    LIKED = "L"
+    SAVED = "S"
+
+
+RECIPES_BACKGROUND_TYPE_SET = RECIPES_BACKGROUND_TYPE._value2member_map_
 
 
 class ReconectMySQLDatabase(ReconnectMixin, MySQLDatabase, ABC):
@@ -26,6 +29,7 @@ class ReconectMySQLDatabase(ReconnectMixin, MySQLDatabase, ABC):
 
 db = ReconectMySQLDatabase(database=database, user=db_user, password=db_password,
                            host=host)
+
 
 class FOLLOWED_STATE_SET(Enum):
     FOLLOWED = "F"
