@@ -11,15 +11,19 @@ COLHER_DE_SOPA = 14
 COLHER_DE_SOBREMESA = 9
 COLHER_DE_CAFE = 1.5
 
+units_model = ['dente','folha','q.b.','ml','copo','lata','fatia']
 
 def normalize_quantity(quantity_original):
-    if "unid.)" in quantity_original:
-        return UNITS_TYPE.UNITS.value, float(quantity_original.split('(')[1].split(' ')[0].strip())
-    elif "unid." in quantity_original or 'dente' in quantity_original or 'folha' in quantity_original or 'q.b.' in quantity_original or 'ml' in quantity_original \
-            or 'copo' in quantity_original or 'lata' in quantity_original or 'fatia' in quantity_original:
+    quantity_original = quantity_original.split(" ",1)
+    value = quantity_original[0]
+    units = quantity_original[1]
+    if units in units_model:
         helper = quantity_original.split(" ")
-        return helper[1].strip().upper(), float(helper[0].strip())
+        return units, float(value)
 
+
+    elif "unid.)" in quantity_original:
+        return UNITS_TYPE.UNITS.value, float(quantity_original.split('(')[1].split(' ')[0].strip())
     elif 'L' in quantity_original:
         helper = quantity_original.split(" ")
         return helper[1].strip().upper(), float(helper[0].replace(",",".").strip())
