@@ -351,7 +351,7 @@ class FollowResource(Resource):
             log.error("Invalid arguments...")
             return Response(status=400, response="Invalid arguments...")
 
-        # delete by referencing the user id
+        # delete follower
         if user_follower_id:
             try:
                 follow = FollowDB.get((FollowDB.followed == user_id) & (FollowDB.follower == user_follower_id))
@@ -361,7 +361,7 @@ class FollowResource(Resource):
 
             follow.delete_instance()
 
-        # delete by referencing the follow id
+        # delete followed
         else:
             try:
                 follow = FollowDB.get((FollowDB.followed == user_followed_id) & (FollowDB.follower == user_id))
@@ -437,23 +437,34 @@ class FollowAcceptResource(Resource):
 
         args = parser.parse_args()
 
-        id = args['id'] if args['id'] else None
+        user_follower_id = args['user_follower_id'] if args['user_follower_id'] else None
+        user_followed_id = args['user_followed_id'] if args['user_followed_id'] else None
 
         # Validate args
 
-        if not id and not user_id:
-            log.error("Missing arguments...")
-            return Response(status=400, response="Missing arguments...")
+        if (not user_follower_id and not user_followed_id) or (user_follower_id and user_followed_id):
+            log.error("Invalid arguments...")
+            return Response(status=400, response="Invalid arguments...")
 
-        # delete by referencing the user id
+        # delete follower
+        if user_follower_id:
+            try:
+                follow = FollowDB.get((FollowRequestDB.followed == user_id) & (FollowRequestDB.follower == user_follower_id))
+            except peewee.DoesNotExist:
+                log.error("User does not follow referenced account.")
+                return Response(status=400, response="User does not follow referenced account.")
 
-        try:
-            follow = FollowRequestDB.get((FollowRequestDB.id == id) & (FollowRequestDB.follower == user_id))
-        except peewee.DoesNotExist:
-            log.error("User does not follow referenced account.")
-            return Response(status=400, response="User does not follow referenced account.")
+
+        # delete followed
+        else:
+            try:
+                follow = FollowRequestDB.get((FollowRequestDB.followed == user_followed_id) & (FollowRequestDB.follower == user_id))
+            except peewee.DoesNotExist:
+                log.error("User does not follow referenced account.")
+                return Response(status=400, response="User does not follow referenced account.")
 
         follow.delete_instance()
+
 
         log.info("Finish DELETE /requests")
         return Response(status=200)
