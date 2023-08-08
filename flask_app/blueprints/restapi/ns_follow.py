@@ -449,7 +449,7 @@ class FollowAcceptResource(Resource):
         # delete follower
         if user_follower_id:
             try:
-                follow = FollowDB.get((FollowRequestDB.followed == user_id) & (FollowRequestDB.follower == user_follower_id))
+                follow = FollowRequestDB.get((FollowRequestDB.followed == user_id) & (FollowRequestDB.follower == user_follower_id))
             except peewee.DoesNotExist:
                 log.error("User does not follow referenced account.")
                 return Response(status=400, response="User does not follow referenced account.")
