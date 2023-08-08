@@ -405,7 +405,7 @@ class FollowAcceptResource(Resource):
 
         try:
             follow_request = FollowRequestDB.get(
-                (FollowRequestDB.followed == user_id) & (FollowRequestDB.id == follow_request_id))
+                (FollowRequestDB.follower == user_id) & (FollowRequestDB.id == follow_request_id))
         except peewee.DoesNotExist:
             log.error("Follow request, couln't be found.")
             return Response(status=400, response="User to be followed, couln't be found.")

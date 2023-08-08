@@ -210,6 +210,8 @@ class IngredientQuantity(BaseModel):
     quantity_original = CharField(null=False)
     quantity_normalized = FloatField(null=True)
     units_normalized = CharField(default="G")
+    extra = CharField(null=False)
+    extra_normalized = FloatField(null=True)
 
     class Meta:
         db_table = 'recipe_ingredient_quantity'
