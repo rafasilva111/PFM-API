@@ -393,11 +393,11 @@ class FollowAcceptResource(Resource):
 
         args = parser.parse_args()
 
-        follow_request_id = args['follow_request_id'] if args['follow_request_id'] else None
+        user_follower_id = args['user_follower_id'] if args['user_follower_id'] else None
 
         # Validate args
 
-        if not follow_request_id:
+        if not user_follower_id:
             log.error("Missing arguments...")
             return Response(status=400, response="Missing arguments...")
 
@@ -405,7 +405,7 @@ class FollowAcceptResource(Resource):
 
         try:
             follow_request = FollowRequestDB.get(
-                (FollowRequestDB.follower == user_id) & (FollowRequestDB.id == follow_request_id))
+                (FollowRequestDB.followed == user_id) & (FollowRequestDB.follower == user_follower_id))
         except peewee.DoesNotExist:
             log.error("Follow request, couln't be found.")
             return Response(status=400, response="User to be followed, couln't be found.")

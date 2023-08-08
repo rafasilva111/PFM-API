@@ -104,7 +104,7 @@ def normalize_quantity(quantity_original):
             log.debug(f"Quantity_helper was unable to be parsed {quantity_helper}")
             return -1
     elif 'c. de caf' in quantity_original:
-        quantity_helper = quantity_original.replace('c. de sobremesa', '')
+        quantity_helper = quantity_original.replace('1 c. de café', '')
         total = float(0)
         if '1⁄2' in quantity_helper:
             quantity_helper = 0.5
