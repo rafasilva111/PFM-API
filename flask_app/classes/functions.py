@@ -7,17 +7,26 @@ from ..ext.logger import log
 
 
 COLHER_DE_CHA = 4
-COLHER_DE_SOPA = 10
+COLHER_DE_SOPA = 14
+COLHER_DE_SOBREMESA = 9
+COLHER_DE_CAFE = 1.5
 
 
 def normalize_quantity(quantity_original):
     if "unid.)" in quantity_original:
-        return UNITS_TYPE.UNITS.value,float(quantity_original.split('(')[1].split(' ')[0].strip())
-    elif 'g' in quantity_original:
-        return UNITS_TYPE.GRAMS.value,float(quantity_original.replace('g', '').strip())
+        return UNITS_TYPE.UNITS.value, float(quantity_original.split('(')[1].split(' ')[0].strip())
+    elif "unid." in quantity_original or 'dente' in quantity_original or 'folha' in quantity_original or 'q.b.' in quantity_original or 'ml' in quantity_original \
+            or 'copo' in quantity_original or 'lata' in quantity_original or 'fatia' in quantity_original:
+        helper = quantity_original.split(" ")
+        return helper[1].strip().upper(), float(helper[0].strip())
 
+    elif 'L' in quantity_original:
+        helper = quantity_original.split(" ")
+        return helper[1].strip().upper(), float(helper[0].replace(",",".").strip())
+    elif 'g' in quantity_original:
+        return UNITS_TYPE.GRAMS.value, float(quantity_original.replace('g', '').strip())
     elif 'gr' in quantity_original:
-        return UNITS_TYPE.GRAMS.value,float(quantity_original.replace('g', '').strip())
+        return UNITS_TYPE.GRAMS.value, float(quantity_original.replace('g', '').strip())
 
     elif 'c. de chá' in quantity_original:
         quantity_helper = quantity_original.replace('c. de chá', '')
@@ -26,7 +35,7 @@ def normalize_quantity(quantity_original):
             total = 0.5 * COLHER_DE_CHA
             quantity_helper = quantity_helper.replace("½", '')
         try:
-            return UNITS_TYPE.GRAMS.value,total + float(quantity_helper.strip()) * COLHER_DE_CHA
+            return UNITS_TYPE.GRAMS.value, total + float(quantity_helper.strip()) * COLHER_DE_CHA
         except:
             # Se o quantity_helper não der para ser parsed
             log.debug(f"Quantity_helper was unable to be parsed: {quantity_helper.strip()}")
@@ -39,15 +48,41 @@ def normalize_quantity(quantity_original):
             quantity_helper = quantity_helper.replace("½", '')
 
         try:
-            return UNITS_TYPE.GRAMS.value,total + float(quantity_helper.strip()) * COLHER_DE_SOPA
+            return UNITS_TYPE.GRAMS.value, total + float(quantity_helper.strip()) * COLHER_DE_SOPA
+        except:
+            # Se o quantity_helper não der para ser parsed
+            log.debug(f"Quantity_helper was unable to be parsed {quantity_helper}")
+            return -1
+    elif 'c. de sobremesa' in quantity_original or 'c. sobremesa' in quantity_original:
+        quantity_helper = quantity_original.replace('c. de sobremesa', '')
+        total = float(0)
+        if "½" in quantity_helper:
+            total = 0.5 * COLHER_DE_SOBREMESA
+            quantity_helper = quantity_helper.replace("½", '')
+
+        try:
+            return UNITS_TYPE.GRAMS.value, total + float(quantity_helper.strip()) * COLHER_DE_SOBREMESA
+        except:
+            # Se o quantity_helper não der para ser parsed
+            log.debug(f"Quantity_helper was unable to be parsed {quantity_helper}")
+            return -1
+    elif 'c. de caf' in quantity_original:
+        quantity_helper = quantity_original.replace('c. de sobremesa', '')
+        total = float(0)
+        if "½" in quantity_helper:
+            total = 0.5 * COLHER_DE_CAFE
+            quantity_helper = quantity_helper.replace("½", '')
+
+        try:
+            return UNITS_TYPE.GRAMS.value, total + float(quantity_helper.strip()) * COLHER_DE_CAFE
         except:
             # Se o quantity_helper não der para ser parsed
             log.debug(f"Quantity_helper was unable to be parsed {quantity_helper}")
             return -1
 
     log.debug(f"Quantity_helper was unable to be parsed: {quantity_original.strip()}")
-    return UNITS_TYPE.GRAMS.value,0
-
+    print(f"Quantity_helper was unable to be parsed: {quantity_original.strip()}")
+    return UNITS_TYPE.GRAMS.value, 0
 
 
 def parse_date(date_str):

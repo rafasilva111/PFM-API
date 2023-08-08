@@ -1089,12 +1089,12 @@ class RecipeListResource(Resource):
                         ingredient.save()
                     if i['quantity_original']:
                         try:
-                            quantity_normalized = normalize_quantity(i['quantity_original'])
+                            units,quantity_normalized = normalize_quantity(i['quantity_original'])
                         except Exception as e:
                             quantity_normalized = float(0)
                             log.error("Tags Table has some error...")
                     ingredient_quantity = IngredientQuantity(quantity_original=i['quantity_original'],
-                                                             quantity_normalized=quantity_normalized)
+                                                             quantity_normalized=quantity_normalized,units_normalized=units)
                     ingredient_quantity.ingredient = ingredient
                     ingredient_quantity.recipe = recipe
                     ingredient_quantity.save()

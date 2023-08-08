@@ -43,6 +43,10 @@ USER_TYPE_SET = FOLLOWED_STATE_SET._value2member_map_
 class UNITS_TYPE(Enum):
     GRAMS = "G"
     UNITS = "U"
+    DENTES = "D"
+    FOLHA = "F"
+    MILILITROS = "M"
+    QB = "QB"
 
 
 USER_TYPE_SET = UNITS_TYPE._value2member_map_
