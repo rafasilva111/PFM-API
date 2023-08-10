@@ -394,6 +394,55 @@ class CommentSchema(ma.Schema):
         return data
 
 
+class CalenderEntryRecipeSchema(ma.Schema):
+    id = fields.Integer(dump_only=True)
+    title = fields.String(required=True)
+    description = fields.String(required=True)
+    img_source = fields.String(required=False, default="")
+    verified = fields.Boolean(required=False)
+
+    difficulty = fields.String(required=False)
+    portion = fields.String(required=False)
+    time = fields.String(required=False)
+
+    likes = fields.Integer(default=0, required=False)
+    views = fields.Integer(default=0, required=False)
+    comments = fields.Integer(default=0, required=False)
+
+    ingredients = fields.Nested(IngredientQuantitySchema, required=True, many=True)
+    preparation = fields.Nested(PreparationSchema, required=True, many=True)
+    nutrition_information = fields.Nested(NutritionInformationSchema)
+    tags = fields.List(fields.String(), required=True)
+    created_by = fields.Nested(UserSimpleSchema, dump_only=True)
+
+    rating = fields.Float(default=0.0)
+    source_rating = fields.String(required=False)
+    source_link = fields.String(required=False)
+    company = fields.String(required=False)
+
+    created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
+    updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
+
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
+
+    @pre_dump
+    def unlist(self, data, **kwargs):
+        # decode blob
+        if 'preparation' in data:
+            data['preparation'] = json.loads(data['preparation'].decode().replace("\'", "\""))
+
+        data['likes'] = RecipeBackground.select().where(
+            (RecipeBackground.recipe == data['id']) & (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value)).count()
+
+        if 'tags' in data:
+            data['tags'] = [a['title'] for a in data['tags']]
+        if 'comments' in data and data['comments'] != []:
+            data['comments'] = len(data['comments'])
+        else:
+            data['comments'] = 0
+        return data
 class CalendarEntrySchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     user = fields.Nested(UserSimpleSchema, required=True, dump_only=True)

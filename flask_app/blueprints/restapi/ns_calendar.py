@@ -121,6 +121,8 @@ class CalendarListResource(Resource):
         calendar_entrys = []
         for item in query.paginate(page, page_size):
             calendar_entry = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
+            recipe_entry = model_to_dict(item.recipe, backrefs=True, recurse=True, manytomany=True)
+            calendar_entry['recipe'] = recipe_entry
             calendar_entrys.append(CalendarEntrySchema().dump(calendar_entry))
 
         response_holder["result"] = calendar_entrys
@@ -215,8 +217,8 @@ class CalendarResource(Resource):
 
         try:
             comment_record = CalendarEntry.get(id=args["id"])
-            comment_model = model_to_dict(comment_record, backrefs=True, recurse=True)
-            comment_schema = CalendarEntryPacthSchema().dump(comment_model)
+            comment_model = model_to_dict(comment_record, backrefs=True, recurse=True,manytomany=True)
+            comment_schema = CalendarEntrySchema().dump(comment_model)
         except peewee.DoesNotExist:
             log.error("Recipe does not exist...")
             return Response(status=400, response="Recipe does not exist...")
