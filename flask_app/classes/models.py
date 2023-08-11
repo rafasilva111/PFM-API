@@ -97,6 +97,8 @@ class User(BaseModel):
     email = CharField(unique=True, null=False)
     password = CharField(null=False)
 
+    fmc_token = CharField(default="")
+
     description = CharField(default="")  # max length 255
 
     profile_type = CharField(default="PRIVATE")  # (protect, private, public)

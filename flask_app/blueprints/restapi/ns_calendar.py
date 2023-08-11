@@ -39,6 +39,7 @@ ENDPOINT = "/calendar"
 @api.route("/list")
 class CalendarListResource(Resource):
 
+    @jwt_required()
     def get(self):
         """List all calender"""
 
@@ -53,6 +54,7 @@ class CalendarListResource(Resource):
         date = parse_date(args['date']) if args['date'] else None
         from_date = parse_date(args['from_date']) if args['from_date'] else None
         to_date = parse_date(args['to_date']) if args['to_date'] else None
+        recipe_id = args['recipe_id'] if args['recipe_id'] else None
 
         # validate args
 
@@ -77,7 +79,6 @@ class CalendarListResource(Resource):
                 (CalendarEntry.realization_date >= date) &
                 (CalendarEntry.realization_date <= next_day)
             )
-
         elif from_date and to_date:
 
             query = CalendarEntry.select().where(
@@ -106,8 +107,16 @@ class CalendarListResource(Resource):
 
             log.info("Finish GET /calender/list")
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+        elif recipe_id:
+
+            # gets user auth id
+            user_id = get_jwt_identity()
+            query = CalendarEntry.select().where((CalendarEntry.recipe == recipe_id) & (CalendarEntry.user == user_id))
+
         else:
             query = CalendarEntry.select()
+
+
 
         # metadata
 

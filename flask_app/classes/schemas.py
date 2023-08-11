@@ -252,6 +252,8 @@ class UserSchema(ma.Schema):
     email = fields.Email(required=True)
     password = fields.String(load_only=True)
 
+    fmc_token = fields.String(required=False)
+
     followers = fields.Integer(dump_only=True, default=0)
     followeds = fields.Integer(dump_only=True, default=0)
 
@@ -323,6 +325,7 @@ class UserPatchSchema(ma.Schema):
     last_name = fields.String(required=False)
     password = fields.String(load_only=True)
     img_source = fields.String(required=False)
+    fmc_token = fields.String(required=False)
     description = fields.String(required=False)
     activity_level = fields.Float(required=False)
     height = fields.Float(required=False)

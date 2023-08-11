@@ -231,7 +231,6 @@ class UserResource(Resource):
         try:
             for key, value in user_validated.items():
                 setattr(user_making_patch, key, value)
-            import pytz  # $ pip install pytz
 
             user_making_patch.updated_date = datetime.now(timezone.utc)
             user_making_patch.save()
