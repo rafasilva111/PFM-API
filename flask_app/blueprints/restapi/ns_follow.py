@@ -8,8 +8,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from flask_restx import Namespace, Resource
 from playhouse.shortcuts import model_to_dict
 
+from ...classes.functions import push_notification
 from ...classes.models import TokenBlocklist, Comment as CommentDB, Follow as FollowDB, User as UserDB, PROFILE_TYPE, \
-    FollowRequest as FollowRequestDB
+    FollowRequest as FollowRequestDB, NOTIFICATION_TYPE
 from ...classes.schemas import CommentSchema, build_metadata, UserSimpleSchema
 from ...ext.logger import log
 
@@ -315,10 +316,17 @@ class FollowResource(Resource):
                 log.error("User already follows this account.")
                 return Response(status=200, response="User already follows this account.")
 
+            # send new follow request notification to recipient
+            push_notification(fmc_token=user_to_be_followed.fmc_token,
+                              notification_type=NOTIFICATION_TYPE.FOLLOW_REQUEST.value)
+
             log.info("Finish POST /follow")
 
         else:
             follow, created = FollowDB.get_or_create(follower=user, followed=user_to_be_followed)
+
+            # send new follow notification to recipient
+            push_notification(fmc_token=user_to_be_followed.fmc_token, notification_type=NOTIFICATION_TYPE.FOLLOWED_USER.value)
 
             if not created:
                 log.error("User already follows this account.")
@@ -415,6 +423,11 @@ class FollowAcceptResource(Resource):
         follow = FollowDB.create(follower=follow_request.follower, followed=follow_request.followed)
         follow.save()
 
+
+        # send new follow notification to recipient
+        push_notification(fmc_token=follow_request.followed.fmc_token,
+                          notification_type=NOTIFICATION_TYPE.FOLLOWED_USER.value)
+
         # delete the request
 
         follow_request.delete_instance()
@@ -449,7 +462,8 @@ class FollowAcceptResource(Resource):
         # delete follower
         if user_follower_id:
             try:
-                follow = FollowRequestDB.get((FollowRequestDB.followed == user_id) & (FollowRequestDB.follower == user_follower_id))
+                follow = FollowRequestDB.get(
+                    (FollowRequestDB.followed == user_id) & (FollowRequestDB.follower == user_follower_id))
             except peewee.DoesNotExist:
                 log.error("User does not follow referenced account.")
                 return Response(status=400, response="User does not follow referenced account.")
@@ -458,13 +472,13 @@ class FollowAcceptResource(Resource):
         # delete followed
         else:
             try:
-                follow = FollowRequestDB.get((FollowRequestDB.followed == user_followed_id) & (FollowRequestDB.follower == user_id))
+                follow = FollowRequestDB.get(
+                    (FollowRequestDB.followed == user_followed_id) & (FollowRequestDB.follower == user_id))
             except peewee.DoesNotExist:
                 log.error("User does not follow referenced account.")
                 return Response(status=400, response="User does not follow referenced account.")
 
         follow.delete_instance()
-
 
         log.info("Finish DELETE /requests")
         return Response(status=200)
@@ -526,4 +540,3 @@ class FollowAcceptResource(Resource):
 
         log.info("Finish GET /accept/list")
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
-

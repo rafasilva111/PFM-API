@@ -8,7 +8,7 @@ from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
 from playhouse.shortcuts import model_to_dict
 
-from ...classes.functions import normalize_quantity
+from ...classes.functions import normalize_quantity, block_user_session_id
 from ...classes.models import Recipe as RecipeDB, \
     RecipeTagThrough as RecipeTagThroughDB, Tag as TagDB, User as UserDB, RecipeBackground as RecipeBackgroundDB, \
     NutritionInformation as NutritionInformationDB
@@ -159,8 +159,7 @@ class RecipeListResource(Resource):
 
         recipes = []
         for recipe in query.paginate(page, page_size):
-            recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
-            recipe_schema = RecipeSchema().dump(recipe_model)
+            recipe_schema = RecipeSchema().dump(recipe)
             recipes.append(recipe_schema)
 
         response_holder["result"] = recipes
@@ -291,26 +290,30 @@ class RecipeResource(Resource):
                     ingredient, created = Ingredient.get_or_create(name=i['ingredient']['name'])
                     quantity_normalized = float(0)
                     units_normalized = UNITS_TYPE.GRAMS.value
+                    extra_quantity_normalized = None
+                    extra_units = None
                     if created:
                         ingredient.save()
                     if i['quantity_original']:
                         try:
-                            units_normalized, quantity_normalized = normalize_quantity(i['quantity_original'])
+                            units_normalized, quantity_normalized,extra_quantity_normalized,extra_units = normalize_quantity(i['quantity_original'])
                         except Exception as e:
                             recipe.delete_instance(recursive=True)
                             log.error("Tags Table has some error...")
                             return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
 
-                    ingredient_quantity = IngredientQuantity(quantity_original=i['quantity_original'],
-                                                             quantity_normalized=quantity_normalized,
-                                                             units_normalized=units_normalized)
+                    ingredient_quantity = RecipeIngredientQuantity(quantity_original=i['quantity_original'],
+                                                                   quantity_normalized=quantity_normalized,
+                                                                   units_normalized=units_normalized,
+                                                                   extra_quantity_normalized=extra_quantity_normalized,
+                                                                   extra_units=extra_units)
                     ingredient_quantity.ingredient = ingredient
                     ingredient_quantity.recipe = recipe
                     ingredient_quantity.save()
 
         except Exception as e:
             recipe.delete_instance(recursive=True)
-            log.error("Tags Table has some error...")
+            log.error("Ingredients Table has some error...")
             return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
 
         # finally build full object
@@ -1014,10 +1017,7 @@ class RecipeListResource(Resource):
         except peewee.DoesNotExist:
             # Otherwise block user token (user cant be logged in and stil reach this far)
             # this only occurs when accounts are not in db, so in prod this wont happen
-            jti = get_jwt()["jti"]
-            now = datetime.now(timezone.utc)
-            token_block_record = TokenBlocklist(jti=jti, created_at=now)
-            token_block_record.save()
+            block_user_session_id()
             log.error("User couln't be found.")
             return Response(status=400, response="User couln't be found.")
 
@@ -1080,27 +1080,37 @@ class RecipeListResource(Resource):
             return Response(status=400, response="Tags Table has some error.\n" + str(e))
 
         # build multi to multi relation to Ingredient Quantity
-
         try:
             if ingredients and ingredients != {}:
                 for i in ingredients:
                     ingredient, created = Ingredient.get_or_create(name=i['ingredient']['name'])
+                    quantity_normalized = float(0)
+                    units_normalized = UNITS_TYPE.GRAMS.value
+                    extra_quantity_normalized = None
+                    extra_units = None
                     if created:
                         ingredient.save()
                     if i['quantity_original']:
                         try:
-                            units,quantity_normalized = normalize_quantity(i['quantity_original'])
+                            units_normalized, quantity_normalized, extra_quantity_normalized, extra_units = normalize_quantity(
+                                i['quantity_original'])
                         except Exception as e:
-                            quantity_normalized = float(0)
+                            recipe.delete_instance(recursive=True)
                             log.error("Tags Table has some error...")
-                    ingredient_quantity = IngredientQuantity(quantity_original=i['quantity_original'],
-                                                             quantity_normalized=quantity_normalized,units_normalized=units)
+                            return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
+
+                    ingredient_quantity = RecipeIngredientQuantity(quantity_original=i['quantity_original'],
+                                                                   quantity_normalized=quantity_normalized,
+                                                                   units_normalized=units_normalized,
+                                                                   extra_quantity_normalized=extra_quantity_normalized,
+                                                                   extra_units=extra_units)
                     ingredient_quantity.ingredient = ingredient
                     ingredient_quantity.recipe = recipe
                     ingredient_quantity.save()
+
         except Exception as e:
             recipe.delete_instance(recursive=True)
-            log.error("Tags Table has some error...")
+            log.error("Ingredients Table has some error...")
             return Response(status=400, response="Ingredients Table has some error.\n" + str(e))
 
         recipe.save()

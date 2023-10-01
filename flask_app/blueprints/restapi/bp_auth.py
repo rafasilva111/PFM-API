@@ -138,9 +138,7 @@ def get_user_session():
         log.error("User couln't be found.")
         return Response(status=400, response="User couln't be found.")
 
-    userResponse = model_to_dict(user_record, backrefs=True, recurse=True, manytomany=True)
-
-    userSchema = UserSchema().dump(userResponse)
+    userSchema = UserSchema().dump(user_record)
 
     log.info("GET /auth")
     return Response(status=200, response=json.dumps(userSchema), mimetype="application/json")

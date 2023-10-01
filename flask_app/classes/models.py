@@ -15,13 +15,6 @@ db_password = os.environ.get('MYSQL_ROOT_PASSWORD') if os.environ.get('MYSQL_ROO
 database = os.environ.get('MYSQL_DATABASE') if os.environ.get('MYSQL_DATABASE') else "flask_api"
 host = os.environ.get('MYSQL_HOST') if os.environ.get('MYSQL_HOST') else "localhost"
 
-class RECIPES_BACKGROUND_TYPE(Enum):
-    LIKED = "L"
-    SAVED = "S"
-
-
-RECIPES_BACKGROUND_TYPE_SET = RECIPES_BACKGROUND_TYPE._value2member_map_
-
 
 class ReconectMySQLDatabase(ReconnectMixin, MySQLDatabase, ABC):
     pass
@@ -29,6 +22,22 @@ class ReconectMySQLDatabase(ReconnectMixin, MySQLDatabase, ABC):
 
 db = ReconectMySQLDatabase(database=database, user=db_user, password=db_password,
                            host=host)
+
+
+class NOTIFICATION_TYPE(Enum):
+    FOLLOWED_USER = 1
+    FOLLOW_REQUEST = 2
+
+
+NOTIFICATION_TYPE_SET = NOTIFICATION_TYPE._value2member_map_
+
+
+class RECIPES_BACKGROUND_TYPE(Enum):
+    LIKED = "L"
+    SAVED = "S"
+
+
+RECIPES_BACKGROUND_TYPE_SET = RECIPES_BACKGROUND_TYPE._value2member_map_
 
 
 class FOLLOWED_STATE_SET(Enum):
@@ -41,11 +50,11 @@ USER_TYPE_SET = FOLLOWED_STATE_SET._value2member_map_
 
 
 class UNITS_TYPE(Enum):
-    GRAMS = "G"
+    GRAMS = "g"
     UNITS = "U"
     DENTES = "D"
     FOLHA = "F"
-    MILILITROS = "M"
+    MILILITROS = "ml"
     QB = "QB"
 
 
@@ -101,6 +110,8 @@ class User(BaseModel):
 
     description = CharField(default="")  # max length 255
 
+    user_portion = IntegerField(default=-1)
+
     profile_type = CharField(default="PRIVATE")  # (protect, private, public)
     verified = BooleanField(default=False)
     user_type = CharField(default="N")  # (normal, company, vip, admin)
@@ -126,6 +137,7 @@ class User(BaseModel):
 class FollowRequest(BaseModel):
     follower = ForeignKeyField(User, backref='followers_request')
     followed = ForeignKeyField(User, backref='followeds_request')
+    created_date = DateTimeField(default=datetime.now())
 
     class Meta:
         db_table = 'follow_request'
@@ -187,7 +199,7 @@ class Recipe(BaseModel):
 
 class RecipeBackground(BaseModel):
     user = ForeignKeyField(User, backref="recipes")
-    recipe = ForeignKeyField(Recipe, backref="backgrounds")
+    recipe = ForeignKeyField(Recipe, backref="backgrounds", on_delete="CASCADE")
     type = CharField(null=False)  # (liked, saved)
 
     class Meta:
@@ -196,7 +208,7 @@ class RecipeBackground(BaseModel):
 
 class Tag(BaseModel):
     title = CharField(null=False, unique=True)
-    recipes = ManyToManyField(Recipe, backref='tags')
+    recipes = ManyToManyField(Recipe, backref='tags', on_delete="CASCADE")
 
 
 RecipeTagThrough = Recipe.tags.get_through_model()
@@ -206,14 +218,14 @@ class Ingredient(BaseModel):
     name = CharField(null=False, unique=True)
 
 
-class IngredientQuantity(BaseModel):
+class RecipeIngredientQuantity(BaseModel):
     ingredient = ForeignKeyField(Ingredient, backref="ingredient_base")
-    recipe = ForeignKeyField(Recipe, backref="ingredients")
+    recipe = ForeignKeyField(Recipe, backref="ingredients", on_delete="CASCADE", null=False)
     quantity_original = CharField(null=False)
     quantity_normalized = FloatField(null=True)
     units_normalized = CharField(default="G")
-    extra = CharField(null=False)
-    extra_normalized = FloatField(null=True)
+    extra_quantity = FloatField(null=True)
+    extra_units = CharField(null=True)
 
     class Meta:
         db_table = 'recipe_ingredient_quantity'
@@ -221,7 +233,7 @@ class IngredientQuantity(BaseModel):
 
 class Comment(BaseModel):
     text = CharField(null=False)
-    recipe = ForeignKeyField(Recipe, backref='comments')
+    recipe = ForeignKeyField(Recipe, backref='comments', on_delete="CASCADE")
     user = ForeignKeyField(User, backref='comments')
     created_date = DateTimeField(default=datetime.now, null=False)
     updated_date = DateTimeField(default=datetime.now, null=False)
@@ -231,8 +243,8 @@ class Comment(BaseModel):
 
 
 class CalendarEntry(BaseModel):
-    recipe = ForeignKeyField(Recipe, backref='recipe')
-    user = ForeignKeyField(User, backref='user')
+    recipe = ForeignKeyField(Recipe, backref='recipe', on_delete="CASCADE")
+    user = ForeignKeyField(User, backref='user', on_delete="CASCADE")
     tag = CharField(null=False)  # Pequeno almoço, Lanche da manhã, Almoço, Lanche da tarde ,Jantar , Ceia
     created_date = DateTimeField(default=datetime.now, null=False)
     realization_date = DateTimeField(null=False)
@@ -242,12 +254,47 @@ class CalendarEntry(BaseModel):
         db_table = 'calendar_entrys'
 
 
+""" Shopping List """
+
+
+class ShoppingList(BaseModel):
+    name = CharField(null=False)
+    user = ForeignKeyField(User, backref='user', on_delete="CASCADE")
+    updated_date = DateTimeField(default=datetime.now, null=False)
+    created_date = DateTimeField(default=datetime.now, null=False)
+    archived = BooleanField(default=False)
+
+    class Meta:
+        db_table = "shopping_list"
+
+
+class ShoppingIngredient(BaseModel):
+    ingredient = ForeignKeyField(Ingredient, backref='ingredient')
+    shopping_list = ForeignKeyField(ShoppingList, backref='shopping_ingredients', on_delete="CASCADE")
+    checked = BooleanField(default=False)
+    quantity = FloatField(null=False)
+    extra_quantity = FloatField(null=True,default=None)
+    units = CharField(default="G")
+    extra_units = CharField(null=True,default=None)
+
+    class Meta:
+        db_table = "shopping_ingredient"
+
+
 ''' Miscellanius '''
+
+
+class Notification(BaseModel):
+    title = CharField(null=False)
+    message = CharField(null=False)
+    user = ForeignKeyField(User, backref='notifications')
+    created_date = DateTimeField(default=datetime.now, null=False)
+    updated_date = DateTimeField(default=datetime.now, null=False)
 
 
 class TokenBlocklist(BaseModel):
     jti = CharField()
-    created_at = DateTimeField(default=datetime.now())
+    created_date = DateTimeField(default=datetime.now())
 
     class Meta:
         db_table = 'token_block_list'

@@ -64,7 +64,7 @@ class MetadataSchema(ma.Schema):
 
 
 class IngredientSchema(ma.Schema):
-    id = fields.Integer(dump_only=True)
+    id = fields.Integer(required=False)
     name = fields.String(required=True)
 
     class Meta:
@@ -72,16 +72,21 @@ class IngredientSchema(ma.Schema):
         unknown = EXCLUDE
 
 
-class IngredientQuantitySchema(ma.Schema):
-    id = fields.Integer(dump_only=True)
+class RecipeIngredientQuantitySchema(ma.Schema):
+    id = fields.Integer(required=False)
     ingredient = fields.Nested(IngredientSchema, required=True)
     quantity_original = fields.String(required=True)
     quantity_normalized = fields.Float(required=False, default=None, allow_none=True)
-    units_normalized = fields.String(validate=lambda x: x in USER_TYPE_SET)
+    units_normalized = fields.String(required=False)  ## this required should be absolute
 
     class Meta:
         ordered = True
         unknown = EXCLUDE
+
+
+class TagSchema(ma.Schema):
+    id = fields.Integer(required=True, dump_only=True)
+    title = fields.String(required=True)
 
 
 class PreparationSchema(ma.Schema):
@@ -164,10 +169,10 @@ class RecipeSchema(ma.Schema):
     views = fields.Integer(default=0, required=False)
     comments = fields.Integer(default=0, required=False)
 
-    ingredients = fields.Nested(IngredientQuantitySchema, required=True, many=True)
+    ingredients = fields.Nested(RecipeIngredientQuantitySchema, required=True, many=True)
     preparation = fields.Nested(PreparationSchema, required=True, many=True)
     nutrition_information = fields.Nested(NutritionInformationSchema)
-    tags = fields.List(fields.String(), required=True)
+    tags = fields.Nested(TagSchema, many=True)
     created_by = fields.Nested(UserSimpleSchema, dump_only=True)
 
     rating = fields.Float(default=0.0)
@@ -185,18 +190,16 @@ class RecipeSchema(ma.Schema):
     @pre_dump
     def unlist(self, data, **kwargs):
         # decode blob
-        if 'preparation' in data:
-            data['preparation'] = json.loads(data['preparation'].decode().replace("\'", "\""))
+        try:
+            if data.preparation:
+                data.preparation = json.loads(data.preparation.decode().replace("\'", "\""))
+        except AttributeError:
+            print()
+        data.likes = RecipeBackground.select().where(
+            (RecipeBackground.recipe == data.id) & (
+                    RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value)).count()
 
-        data['likes'] = RecipeBackground.select().where(
-            (RecipeBackground.recipe == data['id']) & (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value)).count()
-
-        if 'tags' in data:
-            data['tags'] = [a['title'] for a in data['tags']]
-        if 'comments' in data and data['comments'] != []:
-            data['comments'] = len(data['comments'])
-        else:
-            data['comments'] = 0
+        data.comments = data.comments.count()
         return data
 
 
@@ -263,6 +266,8 @@ class UserSchema(ma.Schema):
     description = fields.String(required=False)
     rating = fields.Float(default=0.0)
 
+    user_portion = fields.Integer(default=-1)
+
     profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE_SET)
     verified = fields.Boolean()
     user_type = fields.String(validate=lambda x: x in USER_TYPE_SET)
@@ -272,12 +277,6 @@ class UserSchema(ma.Schema):
     sex = fields.String(validate=lambda x: x in SEXES)
     weight = fields.Float(default=-1)
     age = fields.Integer(dump_only=True)
-
-    liked_recipes = fields.Nested(RecipeSchema, many=True, dump_only=True)
-    saved_recipes = fields.Nested(RecipeSchema, many=True, dump_only=True)
-    created_recipes = fields.Nested(RecipeSchema, many=True, dump_only=True)
-    # todo apply this to schema like previous ones
-    commented_recipes = fields.Nested(RecipeSchema, many=True, dump_only=True)
 
     created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
     updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
@@ -301,21 +300,11 @@ class UserSchema(ma.Schema):
     @pre_dump()
     def recipes(self, data, **kwargs):
 
-        data['followers'] = len(data['followers'])
-        data['followeds'] = len(data['followeds'])
+        data.followers = data.followers.count()
+        data.followeds = data.followeds.count()
 
-        data['followers_request'] = len(data['followers_request'])
-        data['followeds_request'] = len(data['followeds_request'])
-
-        if 'recipes' in data:
-            data['liked_recipes'] = []
-            data['saved_recipes'] = []
-            for r in data['recipes']:
-                if r['type'] == RECIPES_BACKGROUND_TYPE.LIKED.value:
-                    data['liked_recipes'].append(r['recipe'])
-                elif r['type'] == RECIPES_BACKGROUND_TYPE.SAVED.value:
-                    data['saved_recipes'].append(r['recipe'])
-            data.pop('recipes')
+        data.followers_request = data.followers_request.count()
+        data.followeds_request = data.followeds_request.count()
 
         return data
 
@@ -329,6 +318,7 @@ class UserPatchSchema(ma.Schema):
     description = fields.String(required=False)
     activity_level = fields.Float(required=False)
     height = fields.Float(required=False)
+    user_portion = fields.Integer(required=False)
     weight = fields.Float(required=False)
     age = fields.Integer(dump_only=False, required=False)
     updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
@@ -342,9 +332,6 @@ class UserPatchSchema(ma.Schema):
         if 'password' in data:
             data['password'] = generate_password_hash(data['password'])
         return data
-
-
-
 
 
 class UserPerfilSchema(ma.Schema):
@@ -369,7 +356,6 @@ class UserPerfilSchema(ma.Schema):
 
     @pre_dump()
     def follows(self, data, **kwargs):
-
         data['followers'] = len(data['followers'])
         data['followeds'] = len(data['followeds'])
 
@@ -412,7 +398,7 @@ class CalenderEntryRecipeSchema(ma.Schema):
     views = fields.Integer(default=0, required=False)
     comments = fields.Integer(default=0, required=False)
 
-    ingredients = fields.Nested(IngredientQuantitySchema, required=True, many=True)
+    ingredients = fields.Nested(RecipeIngredientQuantitySchema, required=True, many=True)
     preparation = fields.Nested(PreparationSchema, required=True, many=True)
     nutrition_information = fields.Nested(NutritionInformationSchema)
     tags = fields.List(fields.String(), required=True)
@@ -437,7 +423,8 @@ class CalenderEntryRecipeSchema(ma.Schema):
             data['preparation'] = json.loads(data['preparation'].decode().replace("\'", "\""))
 
         data['likes'] = RecipeBackground.select().where(
-            (RecipeBackground.recipe == data['id']) & (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value)).count()
+            (RecipeBackground.recipe == data['id']) & (
+                    RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value)).count()
 
         if 'tags' in data:
             data['tags'] = [a['title'] for a in data['tags']]
@@ -446,6 +433,8 @@ class CalenderEntryRecipeSchema(ma.Schema):
         else:
             data['comments'] = 0
         return data
+
+
 class CalendarEntrySchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     user = fields.Nested(UserSimpleSchema, required=True, dump_only=True)
@@ -460,8 +449,10 @@ class CalendarEntrySchema(ma.Schema):
         unknown = EXCLUDE
 
 
-class CalendarEntryPacthSchema(ma.Schema):
+class CalendarEntrySimpleSchema(ma.Schema):
+    id = fields.Integer(dump_only=True)
     tag = fields.String(validate=lambda x: x in CALENDER_ENTRY_TAG_SET, allow_none=True, required=False)
+    recipe = fields.Nested(RecipeSchema, many=False, dump_only=True)
     realization_date = fields.DateTime(format='%d/%m/%YT%H:%M:%S', allow_none=True, required=False)
     checked_done = fields.Boolean(allow_none=True, required=False)
 
@@ -470,21 +461,52 @@ class CalendarEntryPacthSchema(ma.Schema):
         unknown = EXCLUDE
 
 
+""" Shopping List"""
+
+
+class ShoppingIngredientSchema(ma.Schema):
+    id = fields.Integer(required=False)
+    ingredient = fields.Nested(IngredientSchema, required=True)
+    checked = fields.Boolean(default=False)
+    quantity = fields.Float(required=True)
+    extra_quantity = fields.Float(required=False, default=None, allow_none=True)
+    units = fields.String(required=True)
+    extra_units = fields.String(required=False, default=None, allow_none=True)
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
+class ShoppingListPatchSchema(ma.Schema):
+    name = fields.String(required=False)
+    archived = fields.Boolean(required=False)
+    shopping_ingredients = fields.List(fields.Nested(ShoppingIngredientSchema, required=True), required=False)
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
+class ShoppingListSchema(ma.Schema):
+    id = fields.Integer(required=False, dump_only=True)
+    name = fields.String(required=False, allow_none=True)
+    updated_date = fields.DateTime(format='%d/%m/%YT%H:%M:%S', required=False, dump_only=True, allow_none=True)
+    created_date = fields.DateTime(format='%d/%m/%YT%H:%M:%S', required=False, dump_only=True)
+    shopping_ingredients = fields.List(fields.Nested(ShoppingIngredientSchema, required=True))
+    archived = fields.Boolean(default=False)
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
 ''' Miscellanius '''
 
 
 class LoginSchema(ma.Schema):
     email = fields.Email(required=True)
     password = fields.Str(required=True)
-
-    class Meta:
-        unknown = EXCLUDE
-
-
-class CalenderIngredient(ma.Schema):
-    name = fields.Str(required=True)
-    quantity = fields.Integer(required=True)
-    units = fields.Str(required=True)
 
     class Meta:
         unknown = EXCLUDE

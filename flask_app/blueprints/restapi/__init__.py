@@ -12,6 +12,7 @@ from .ns_user import api as api_user,ENDPOINT as USER_ENDPOINT
 from .ns_comment import api as api_comment,ENDPOINT as COMMENT_ENDPOINT
 from .ns_follow import api as api_follow,ENDPOINT as FOLLOW_ENDPOINT
 from .ns_calendar import api as api_calendar,ENDPOINT as CALENDAR_ENDPOINT
+from .ns_shopping_list import api as api_shopping_list,ENDPOINT as SHOPPING_LIST_ENDPOINT
 
 from .bp_auth import auth_blueprint
 from .bp_admin import admin_blueprint
@@ -21,6 +22,7 @@ from .bp_admin import api as api_admin_company,ENDPOINT_COMPANY
 
 bp = Blueprint("restapi", __name__, url_prefix=BASE_URL_PREFIX)
 
+## TODO
 description = r"""
 This is an example of a RESTful API using Flask-RESTX, it consists (actually it was the first thing that came to my mind) of relationships with schools, students, managers and what the rest entails, it is somewhat simple but it would be a complete example using Marshmallow and SQLAlchemy, just add ¯¯\\\_(ツ)_/¯
 """
@@ -31,6 +33,7 @@ api.add_namespace(api_user, path=USER_ENDPOINT)
 api.add_namespace(api_comment, path=COMMENT_ENDPOINT)
 api.add_namespace(api_follow, path=FOLLOW_ENDPOINT)
 api.add_namespace(api_calendar, path=CALENDAR_ENDPOINT)
+api.add_namespace(api_shopping_list, path=SHOPPING_LIST_ENDPOINT)
 api.add_namespace(api_admin_company, path=ENDPOINT_COMPANY)
 
 def init_app(app):

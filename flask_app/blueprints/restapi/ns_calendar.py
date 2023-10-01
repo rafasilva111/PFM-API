@@ -1,6 +1,6 @@
 import json
 import math
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import peewee
 from flask import Response, request
@@ -10,11 +10,11 @@ from marshmallow import ValidationError
 from playhouse.shortcuts import model_to_dict
 
 from ...classes.functions import parse_date, add_days
-from ...classes.models import Recipe as RecipeDB, Comment as CommentDB, Follow as FollowDB, User as UserDB, \
-    CalendarEntry, TokenBlocklist, IngredientQuantity, Recipe
-from ...classes.schemas import CommentSchema, build_metadata, \
-    CalendarEntryPacthSchema, \
-    CalenderIngredient, CalendarEntrySchema
+from ...classes.models import Recipe as RecipeDB, User as UserDB, \
+    CalendarEntry, TokenBlocklist, RecipeIngredientQuantity, Recipe
+from ...classes.schemas import build_metadata, \
+    CalendarEntrySimpleSchema, \
+    ShoppingIngredient, CalendarEntrySchema, ShoppingIngredientSchema
 from ...ext.logger import log
 
 # Create name space
@@ -86,24 +86,21 @@ class CalendarListResource(Resource):
                 (CalendarEntry.realization_date <= to_date)
             ).order_by(CalendarEntry.realization_date)
 
-            # groups calender list to dates
+            # Use a defaultdict to group entries by date
+            from collections import defaultdict
+            date_to_entries = defaultdict(list)
 
-            ## fills list
-            date_to_entries = {}
             for item in query:
                 date_string = item.realization_date.strftime("%d/%m/%Y")
-                if date_string not in date_to_entries:
-                    date_to_entries[date_string] = []
-                date_to_entries[date_string].append(
-                    CalendarEntryPacthSchema().dump(model_to_dict(item, backrefs=True, recurse=True, manytomany=True)))
+                date_to_entries[date_string].append(CalendarEntrySchema().dump(item))
 
-            ## fills list whit empty arrays
-            response_holder["result"] = {}
-            next_day = from_date
-            while next_day <= to_date:
-                next_day_string = next_day.strftime("%d/%m/%Y")
-                response_holder["result"][next_day_string] = date_to_entries.get(next_day_string, [])
-                next_day = add_days(next_day, 1)
+            # Create a date range and initialize result dictionary with empty arrays
+            date_range = [from_date + timedelta(days=i) for i in range((to_date - from_date).days + 1)]
+            response_holder["result"] = {date.strftime("%d/%m/%Y"): [] for date in date_range}
+
+            # Fill the result dictionary with grouped entries
+            for date_string, entries in date_to_entries.items():
+                response_holder["result"][date_string] = entries
 
             log.info("Finish GET /calender/list")
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
@@ -120,9 +117,9 @@ class CalendarListResource(Resource):
 
         # metadata
 
-        total_comments = int(query.count())
-        total_pages = math.ceil(total_comments / page_size)
-        metadata = build_metadata(page, page_size, total_pages, total_comments, ENDPOINT)
+        total_calender_entrys = int(query.count())
+        total_pages = math.ceil(total_calender_entrys / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_calender_entrys, ENDPOINT)
         response_holder["_metadata"] = metadata
 
         # response data
@@ -143,8 +140,9 @@ class CalendarListResource(Resource):
 @api.route("/ingredients/list")
 class CalendarListResource(Resource):
 
+    @jwt_required()
     def get(self):
-        """List all calender"""
+        """List all ingredients on calender """
 
         log.info("GET /calendar/list")
 
@@ -155,7 +153,26 @@ class CalendarListResource(Resource):
         from_date = parse_date(args['from_date']) if args['from_date'] else None
         to_date = parse_date(args['to_date']) if args['to_date'] else None
 
+        # gets user auth id
+
+        user_logged_id = get_jwt_identity()
+
+        # check if user exists
+        try:
+            user_logged = UserDB.get(user_logged_id)
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and still reach this far)
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            log.error("User couldn't be found by this id.")
+            return Response(status=400, response="User couldn't be found by this id.")
+
         # validate args
+
+        if user_logged.user_portion == -1:
+            return Response(status=400, response="User can't have default's portion to access this.")
 
         if from_date is None:
             return Response(status=400, response="From date cant be null")
@@ -172,7 +189,7 @@ class CalendarListResource(Resource):
 
         # query
 
-        query = (IngredientQuantity
+        query = (RecipeIngredientQuantity
                  .select()
                  .join(Recipe)
                  .join(CalendarEntry)
@@ -182,25 +199,31 @@ class CalendarListResource(Resource):
         total_ingredients = {}
 
         for item in query:
-            portion = 1
+            ratio = 1
             if item.recipe.portion and 'pessoas' in item.recipe.portion:
                 portion = int(item.recipe.portion.split(" ")[0])
+                if user_logged.user_portion >= 1:
+                    ratio = user_logged.user_portion / portion
 
             ingredient_name = item.ingredient.name
-            if ingredient_name in total_ingredients and item.quantity_normalized is not None:
-                total_ingredients[ingredient_name]['quantity'] += item.quantity_normalized / portion
+            if ingredient_name in total_ingredients:
+                total_ingredients[ingredient_name]["quantity"] += float(item.quantity_normalized) * ratio
+                if item.extra_quantity:
+                    total_ingredients[ingredient_name]["extra_quantity"] += float(item.extra_quantity) * ratio
             else:
-                total_ingredients[ingredient_name] = {
-                    "name": ingredient_name,
-                    "quantity": item.quantity_normalized / portion,
-                    "units": item.units_normalized
-                }
+                total_ingredients[ingredient_name] = ShoppingIngredientSchema().dump({
+                    "ingredient": model_to_dict(item.ingredient),
+                    "quantity": float(item.quantity_normalized) * ratio,
+                    "extra_quantity": float(item.extra_quantity) * ratio if item.extra_quantity else None,
+                    "units": item.units_normalized,
+                    "extra_units": item.extra_units,
+                })
 
-        response_holder["result"] = [CalenderIngredient().load(ingredient) for ingredient in total_ingredients.values()]
+        response_holder["result"] = list(total_ingredients.values())
 
         # response data
 
-        log.info("Finish GET /follow/list")
+        log.info("Finish GET /ingredients/list")
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 
@@ -264,7 +287,7 @@ class CalendarResource(Resource):
         # Validate json body by loading it into schema
 
         try:
-            calendar_entry_validated = CalendarEntryPacthSchema().load(json_data)
+            calendar_entry_validated = CalendarEntrySimpleSchema().load(json_data)
         except ValidationError as err:
             log.error("Invalid arguments...")
             return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
@@ -298,7 +321,8 @@ class CalendarResource(Resource):
 
         log.info("Finish POST /calendar")
 
-        return Response(status=201)
+        return Response(status=201, response=json.dumps(CalendarEntrySchema().dump(calendar_model)),
+                        mimetype="application/json")
 
     @jwt_required()
     def patch(self):
@@ -332,7 +356,7 @@ class CalendarResource(Resource):
 
         # validate data through user schema
         try:
-            calender_entry_validated = CalendarEntryPacthSchema().load(data)
+            calender_entry_validated = CalendarEntrySimpleSchema().load(data)
         except Exception as e:
             log.error("Error validating user: " + str(e))
             return Response(status=400, response="Error patching user: " + str(e))
@@ -349,9 +373,7 @@ class CalendarResource(Resource):
 
         log.info("Finished PATCH /user")
         return Response(status=200, response=json.dumps(
-            CalendarEntrySchema().dump(
-                model_to_dict(calender_entry_patch, backrefs=True, recurse=True, manytomany=True))),
-                        mimetype="application/json")
+            CalendarEntrySchema().dump(calender_entry_patch)), mimetype="application/json")
 
     @jwt_required()
     def delete(self):
