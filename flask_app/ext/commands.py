@@ -6,6 +6,10 @@ def init_app(app,db):
     def create_db():
         db.create_tables()
 
+    @app.cli.command("create_super_user")
+    def create_super_user():
+        db.create_super_user()
+
     @app.cli.command("drop_db")
     def drop_db():
         db.drop_tables()
@@ -13,6 +17,7 @@ def init_app(app,db):
 
     app.cli.add_command(create_db)
     app.cli.add_command(drop_db)
+    app.cli.add_command(create_super_user)
 
 #     @app.cli.command("add_student")
 #     def add_student_to_db():

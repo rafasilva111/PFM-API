@@ -1,16 +1,10 @@
 import json
 import re
 
-import peewee
-from flask_bcrypt import generate_password_hash
 from marshmallow import fields, validates, pre_dump, pre_load, EXCLUDE
-from enum import Enum
-
-from marshmallow_sqlalchemy import ModelConverter
-
-from flask_app.ext.schema import ma
 
 from flask_app.classes.models import *
+from flask_app.ext.schema import ma
 
 SEXES = {"M", "F", "NA"}
 
@@ -190,11 +184,10 @@ class RecipeSchema(ma.Schema):
     @pre_dump
     def unlist(self, data, **kwargs):
         # decode blob
-        try:
-            if data.preparation:
-                data.preparation = json.loads(data.preparation.decode().replace("\'", "\""))
-        except AttributeError:
-            print()
+
+        if data.preparation:
+            data.preparation = json.loads(data.preparation.decode().replace("\'", "\""))
+
         data.likes = RecipeBackground.select().where(
             (RecipeBackground.recipe == data.id) & (
                     RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value)).count()

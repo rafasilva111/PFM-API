@@ -187,12 +187,12 @@ def get_recipes_user_session():
 
     for item in user_record.recipes:
         if item.type == RECIPES_BACKGROUND_TYPE.LIKED.value:
-            liked.append(recipe_schema.dump(model_to_dict(item.recipe, manytomany=True)))
+            liked.append(recipe_schema.dump(item.recipe))
         if item.type == RECIPES_BACKGROUND_TYPE.SAVED.value:
-            saved.append(recipe_schema.dump(model_to_dict(item.recipe, manytomany=True)))
+            saved.append(recipe_schema.dump(item.recipe))
 
     for item in user_record.created_recipes:
-        created.append(recipe_schema.dump(model_to_dict(item, backrefs=True, manytomany=True)))
+        created.append(recipe_schema.dump(item))
 
     response_holder = {"result": {'recipes_created': created, 'recipes_liked': liked, 'recipes_saved': saved}}
 

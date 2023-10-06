@@ -1,4 +1,4 @@
-from flask_marshmallow import Marshmallow,fields
+from flask_marshmallow import Marshmallow
 
 ma = Marshmallow()
 
