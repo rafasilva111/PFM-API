@@ -8,3 +8,5 @@ flask_server.pem
 logs/info.log
 
 logs/debug.log
+
+note.txt

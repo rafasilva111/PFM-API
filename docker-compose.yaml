@@ -32,7 +32,7 @@ services:
                 flask_network:
                         aliases:
                                 - flask-network
-        command: bash -c 'flask create_db && flask create_super_user && gunicorn --bind 0.0.0.0:8000 --workers 4 "run:create_run()"'
+        command: bash -c 'flask create_db && flask create_super_user && gunicorn --bind 0.0.0.0:8000 --workers 2 "run:create_run()"'
     nginx:
         image: nginx
         container_name: flask_nginx
