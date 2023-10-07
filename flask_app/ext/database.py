@@ -8,9 +8,7 @@ password = os.environ.get('MYSQL_ROOT_PASSWORD') if os.environ.get('MYSQL_ROOT_P
 database = os.environ.get('MYSQL_DATABASE') if os.environ.get('MYSQL_DATABASE') else "flask_api"
 host = os.environ.get('MYSQL_HOST') if os.environ.get('MYSQL_HOST') else "localhost"
 
-# super user
-SUPER_USER = os.environ.get('SUPER_USER') if os.environ.get('SUPER_USER') else "root@root.com"
-host = os.environ.get('SUPER_USER_PASSWORD') if os.environ.get('SUPER_USER_PASSWORD') else "root"
+
 
 
 class ReconectMySQLDatabase(ReconnectMixin, MySQLDatabase):
@@ -32,11 +30,6 @@ class Database(object):
         self.db = db
         self.register_handlers()
 
-    def init_app(self, app):
-        self.app = app
-
-        return db
-
     def create_tables(self):
         return db.create_tables(models)
 
@@ -44,12 +37,16 @@ class Database(object):
         return db.drop_tables(models)
 
     def create_super_user(self):
+
+        # super user
+        super_user_email = os.environ.get('SUPER_USER') if os.environ.get('SUPER_USER') else "root@root.com"
+        super_user_password = os.environ.get('SUPER_USER_PASSWORD') if os.environ.get('SUPER_USER_PASSWORD') else "root"
         try:
             super_user = User.create(**UserSchema().load({
                 "name":"John Doe",
                 "birth_date":"15/03/2000",
-                "email":"root@root.com",
-                "password":"root",
+                "email":super_user_email,
+                "password":super_user_password,
                 "description":"",
                 "user_type":"A"
             }))

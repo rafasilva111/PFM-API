@@ -1,4 +1,5 @@
 import json
+import pickle
 import re
 
 from marshmallow import fields, validates, pre_dump, pre_load, EXCLUDE
@@ -186,7 +187,7 @@ class RecipeSchema(ma.Schema):
         # decode blob
 
         if data.preparation:
-            data.preparation = json.loads(data.preparation.decode().replace("\'", "\""))
+            data.preparation = pickle.loads(data.preparation)
 
         data.likes = RecipeBackground.select().where(
             (RecipeBackground.recipe == data.id) & (

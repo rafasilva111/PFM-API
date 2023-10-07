@@ -245,7 +245,7 @@ class RecipeResource(Resource):
 
         # fills recipe object
         recipe = RecipeDB(**recipe_validated)
-        recipe.preparation = str(preparation).encode()
+        recipe.preparation = pickle.dumps(preparation)
         # use .decode() to decode
 
         # set created by user
@@ -1042,8 +1042,7 @@ class RecipeListResource(Resource):
 
         # fills recipe object
         recipe = RecipeDB(**recipe_validated)
-        recipe.preparation = str(preparation).encode()
-        # use .decode() to decode
+        recipe.preparation = pickle.dumps(preparation)
         recipe.created_by = user
 
         # build relation to nutrition_table
@@ -1069,7 +1068,7 @@ class RecipeListResource(Resource):
         try:
             if tags and tags != {}:
                 for t in tags:
-                    tag, created = TagDB.get_or_create(title=t)
+                    tag, created = TagDB.get_or_create(title=t['title'])
                     tag.save()
                     recipe.tags.add(tag)
 
