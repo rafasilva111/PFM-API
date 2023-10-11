@@ -7,7 +7,7 @@ from flask import Response, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
-from playhouse.shortcuts import model_to_dict
+
 
 from ...classes.functions import parse_date, add_days
 from ...classes.models import Recipe as RecipeDB, User as UserDB, \
@@ -126,9 +126,7 @@ class CalendarListResource(Resource):
 
         calendar_entrys = []
         for item in query.paginate(page, page_size):
-            calendar_entry = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-            recipe_entry = model_to_dict(item.recipe, backrefs=True, recurse=True, manytomany=True)
-            calendar_entry['recipe'] = recipe_entry
+            calendar_entry = item
             calendar_entrys.append(CalendarEntrySchema().dump(calendar_entry))
 
         response_holder["result"] = calendar_entrys
@@ -212,7 +210,7 @@ class CalendarListResource(Resource):
                     total_ingredients[ingredient_name]["extra_quantity"] += float(item.extra_quantity) * ratio
             else:
                 total_ingredients[ingredient_name] = ShoppingIngredientSchema().dump({
-                    "ingredient": model_to_dict(item.ingredient),
+                    "ingredient": item.ingredient,
                     "quantity": float(item.quantity_normalized) * ratio,
                     "extra_quantity": float(item.extra_quantity) * ratio if item.extra_quantity else None,
                     "units": item.units_normalized,
@@ -249,8 +247,7 @@ class CalendarResource(Resource):
 
         try:
             comment_record = CalendarEntry.get(id=args["id"])
-            comment_model = model_to_dict(comment_record, backrefs=True, recurse=True,manytomany=True)
-            comment_schema = CalendarEntrySchema().dump(comment_model)
+            comment_schema = CalendarEntrySchema().dump(comment_record)
         except peewee.DoesNotExist:
             log.error("Recipe does not exist...")
             return Response(status=400, response="Recipe does not exist...")

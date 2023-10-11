@@ -215,7 +215,7 @@ class RecipeSimpleSchema(ma.Schema):
     source_link = fields.String(required=False)
     company = fields.String(required=False)
 
-    tags = fields.List(fields.String(), required=True)
+    tags = fields.Nested(TagSchema, required=True, many=True)
     created_by = fields.Nested(UserSimpleSchema, dump_only=True)
 
     created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
@@ -270,7 +270,7 @@ class UserSchema(ma.Schema):
     height = fields.Float(default=-1)
     sex = fields.String(validate=lambda x: x in SEXES)
     weight = fields.Float(default=-1)
-    age = fields.Integer(dump_only=True)
+    age = fields.Integer(dump_only=True,default=0)
 
     created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
     updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
@@ -359,22 +359,14 @@ class UserPerfilSchema(ma.Schema):
 class CommentSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     text = fields.String(required=True, null=False)
-    user = fields.Dict(required=True, dump_only=True)
-    recipe = fields.Dict(required=True, dump_only=True)
+    user = fields.Nested(UserSchema,dump_only=True)
+    recipe = fields.Nested(RecipeSimpleSchema,dump_only=True)
     created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
-    updated_date = fields.DateTime(dump_only=False, format='%d/%m/%YT%H:%M:%S')
+    updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
 
     class Meta:
         ordered = True
         unknown = EXCLUDE
-
-    @pre_dump
-    def prepare_user_and_recipe(self, data, **kwargs):
-        if 'recipe' in data:
-            data['recipe'] = RecipeSimpleSchema().dump(data['recipe'])
-        if 'user' in data:
-            data['user'] = UserSchema().dump(data['user'])
-        return data
 
 
 class CalenderEntryRecipeSchema(ma.Schema):

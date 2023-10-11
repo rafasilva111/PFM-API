@@ -1,16 +1,14 @@
 import json
+from datetime import date
 from datetime import timedelta, datetime, timezone
+
 from flask import Response, Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
-from flask_restx import Namespace
 from marshmallow import ValidationError
 from peewee import DoesNotExist
-from playhouse.shortcuts import model_to_dict
 
-from flask_app.ext.database import db
-from ...classes.models import Recipe, TokenBlocklist, User as UserDB, RECIPES_BACKGROUND_TYPE
+from ...classes.models import TokenBlocklist, User as UserDB, RECIPES_BACKGROUND_TYPE
 from ...classes.schemas import LoginSchema, RecipeSchema, UserSchema
-from datetime import date
 from ...ext.logger import log
 
 # Create blue print

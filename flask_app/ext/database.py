@@ -29,6 +29,8 @@ class Database(object):
         self.app = app
         self.db = db
         self.register_handlers()
+        self.create_tables()
+        self.create_super_user()
 
     def create_tables(self):
         return db.create_tables(models)
@@ -52,7 +54,7 @@ class Database(object):
             }))
             super_user.save()
         except IntegrityError:
-            print("[INFO] Super user already created")
+            pass
 
 
 

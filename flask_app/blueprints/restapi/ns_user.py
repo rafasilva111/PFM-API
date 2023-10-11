@@ -77,8 +77,7 @@ class UserListResource(Resource):
 
             recipes = []
             for item in query.paginate(page, page_size):
-                recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-                recipes.append(UserSchema().dump(recipe))
+                recipes.append(UserSchema().dump(item))
 
             response_holder["result"] = recipes
 
@@ -101,8 +100,7 @@ class UserListResource(Resource):
 
             recipes = []
             for item in UserDB.select().paginate(page, page_size):
-                recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-                recipes.append(UserSchema().dump(recipe))
+                recipes.append(UserSchema().dump(item))
 
             response_holder["result"] = recipes
 
@@ -237,7 +235,7 @@ class UserResource(Resource):
 
             log.info("Finished PATCH /user")
             return Response(status=200, response=json.dumps(
-                UserSchema().dump(model_to_dict(user_making_patch, backrefs=True, recurse=True, manytomany=True))),
+                UserSchema().dump(user_making_patch)),
                             mimetype="application/json")
         except Exception as e:
             log.error(return_error_sql(e))

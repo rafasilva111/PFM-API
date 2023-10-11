@@ -6,7 +6,6 @@ import peewee
 from flask import Response
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from flask_restx import Namespace, Resource
-from playhouse.shortcuts import model_to_dict
 
 from ...classes.functions import push_notification
 from ...classes.models import TokenBlocklist, Comment as CommentDB, Follow as FollowDB, User as UserDB, PROFILE_TYPE, \
@@ -80,8 +79,7 @@ class FollowsListResource(Resource):
 
             comments = []
             for item in query.paginate(page, page_size):
-                recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-                comments.append(CommentSchema().dump(recipe))
+                comments.append(CommentSchema().dump(item))
 
             response_holder["result"] = comments
 
@@ -104,8 +102,7 @@ class FollowsListResource(Resource):
 
             comments = []
             for item in CommentDB.select().paginate(page, page_size):
-                comment = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-                comments.append(CommentSchema().dump(comment))
+                comments.append(CommentSchema().dump(item))
 
             response_holder["result"] = comments
 
@@ -163,8 +160,7 @@ class FollowersResource(Resource):
 
         followers = []
         for item in query.paginate(page, page_size):
-            follow_model = model_to_dict(item.follower)
-            followers.append(UserSimpleSchema().dump(follow_model))
+            followers.append(UserSimpleSchema().dump(item.follower))
 
         response_holder["result"] = followers
 
@@ -220,8 +216,7 @@ class FollowersResource(Resource):
 
         followers = []
         for item in query.paginate(page, page_size):
-            follow = model_to_dict(item.followed)
-            followers.append(UserSimpleSchema().dump(follow))
+            followers.append(UserSimpleSchema().dump(item.followed))
 
         response_holder["result"] = followers
 
@@ -253,8 +248,7 @@ class FollowResource(Resource):
 
         try:
             comment_record = CommentDB.get(id=args["id"])
-            comment_model = model_to_dict(comment_record, backrefs=True, recurse=True, manytomany=True)
-            comment_schema = CommentSchema().dump(comment_model)
+            comment_schema = CommentSchema().dump(comment_record)
         except peewee.DoesNotExist:
             log.error("Recipe does not exist...")
             return Response(status=400, response="Recipe does not exist...")
@@ -533,8 +527,7 @@ class FollowAcceptResource(Resource):
 
         followers = []
         for item in query.paginate(page, page_size):
-            follow_model = model_to_dict(item.follower)
-            followers.append(UserSimpleSchema().dump(follow_model))
+            followers.append(UserSimpleSchema().dump(item.follower))
 
         response_holder["result"] = followers
 

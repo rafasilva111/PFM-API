@@ -7,7 +7,6 @@ from flask import Response, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
-from playhouse.shortcuts import model_to_dict
 
 from ...classes.models import TokenBlocklist, Comment as CommentDB, Recipe as RecipeDB, User as UserDB
 from ...classes.schemas import CommentSchema, build_metadata
@@ -76,8 +75,7 @@ class CommentsListResource(Resource):
 
             comments = []
             for item in query.paginate(page, page_size):
-                recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-                comments.append(CommentSchema().dump(recipe))
+                comments.append(CommentSchema().dump(item))
 
             response_holder["result"] = comments
 
@@ -100,8 +98,7 @@ class CommentsListResource(Resource):
 
             comments = []
             for item in CommentDB.select().paginate(page, page_size):
-                comment = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-                comments.append(CommentSchema().dump(comment))
+                comments.append(CommentSchema().dump(item))
 
             response_holder["result"] = comments
 
@@ -130,8 +127,7 @@ class CommentResource(Resource):
 
         try:
             comment_record = CommentDB.get(id=args["id"])
-            comment_model = model_to_dict(comment_record, backrefs=True, recurse=True, manytomany=True)
-            comment_schema = CommentSchema().dump(comment_model)
+            comment_schema = CommentSchema().dump(comment_record)
         except peewee.DoesNotExist:
             log.error("Recipe does not exist...")
             return Response(status=400, response="Recipe does not exist...")
@@ -203,7 +199,7 @@ class CommentResource(Resource):
 
         # prepares object to be returned
 
-        comment_schema = CommentSchema().dump(model_to_dict(comment))
+        comment_schema = CommentSchema().dump(comment)
         comment_json = json.dumps(comment_schema)
 
         log.info("Finished POST /comment")
@@ -302,35 +298,26 @@ class CommentResource(Resource):
         # Get args
         args = parser.parse_args()
 
-        id = args['id']
-        user_id = args['user_id']
+        comment_id = args['id']
 
         # Validate args
         if not args["id"]:
             log.error("Missing id argument...")
             return Response(status=400, response="Missing id argument...")
 
-        if not args["user_id"]:
-            log.error("Missing user_id argument...")
-            return Response(status=400, response="Missing user_id argument...")
-
         # get comment by id
         try:
-            comment = CommentDB.get(id=id, user_id=user_id)
+            comment = CommentDB.get(id=comment_id, user=user)
         except peewee.DoesNotExist:
             log.error("No comment found by this id.")
             return Response(status=400, response="No comment found by this id.")
 
         # checks if user is admin or the one who created the comment and deletes the comment
 
-        if user.user_type == "A" or user.id == comment.user.id:
-            try:
-                comment.delete_instance()
-                log.info("Finished DELETE /comment")
-                return Response(status=200, response="Comment deleted successfully.")
-            except peewee.DoesNotExist:
-                log.error("No comment found by this id.")
-                return Response(status=400, response="No comment found by this id.")
-        else:
-            log.error("You are not authorized to delete this comment.")
-            return Response(status=400, response="You are not authorized to delete this comment.")
+        try:
+            comment.delete_instance()
+            log.info("Finished DELETE /comment")
+            return Response(status=200, response="Comment deleted successfully.")
+        except peewee.DoesNotExist:
+            log.error("No comment found by this id.")
+            return Response(status=400, response="No comment found by this id.")

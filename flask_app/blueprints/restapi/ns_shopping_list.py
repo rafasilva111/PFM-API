@@ -1,12 +1,12 @@
 import json
 import math
 from datetime import datetime, timezone
+
 import peewee
 from flask import Response, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
-from playhouse.shortcuts import model_to_dict
 
 from .errors import return_error_sql
 from ...classes.functions import block_user_session_id

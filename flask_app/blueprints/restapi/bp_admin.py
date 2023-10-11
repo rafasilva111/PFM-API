@@ -174,7 +174,7 @@ class CompanyUserResource(Resource):
 
             log.info("Finished PATCH /user")
             return Response(status=200, response=json.dumps(
-                UserSchema().dump(model_to_dict(user_making_patch, backrefs=True, recurse=True, manytomany=True))),
+                UserSchema().dump(user_making_patch, backrefs=True, recurse=True, manytomany=True)),
                             mimetype="application/json")
         except Exception as e:
             log.error(return_error_sql(e))

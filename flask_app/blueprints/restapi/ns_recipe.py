@@ -6,7 +6,6 @@ from flask import Response, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
-from playhouse.shortcuts import model_to_dict
 
 from ...classes.functions import normalize_quantity, block_user_session_id
 from ...classes.models import Recipe as RecipeDB, \
@@ -189,10 +188,9 @@ class RecipeResource(Resource):
 
         try:
             recipe_record = RecipeDB.get(id=args["id"])
-            recipe_model = model_to_dict(recipe_record, backrefs=True, recurse=True, manytomany=True)
             ## add likes to recipe model
 
-            recipe_schema = RecipeSchema().dump(recipe_model)
+            recipe_schema = RecipeSchema().dump(recipe_record)
 
         except peewee.DoesNotExist:
             log.error("Recipe does not exist...")
@@ -538,8 +536,7 @@ class RecipeListBackgroundSortResource(Resource):
 
         recipes = []
         for recipe in query.paginate(page, page_size):
-            recipe_model = model_to_dict(recipe, backrefs=True, recurse=True, manytomany=True)
-            recipe_schema = RecipeSchema().dump(recipe_model)
+            recipe_schema = RecipeSchema().dump(recipe)
             recipes.append(recipe_schema)
 
         response_holder["result"] = recipes
@@ -725,8 +722,7 @@ class RecipeLikesResource(Resource):
 
         recipes = []
         for item in query.paginate(page, page_size):
-            recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-            recipes.append(RecipeSchema().dump(recipe))
+            recipes.append(RecipeSchema().dump(item))
 
         response_holder["result"] = recipes
 
@@ -899,8 +895,7 @@ class RecipeSavesResource(Resource):
 
         recipes = []
         for item in query.paginate(page, page_size):
-            recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-            recipes.append(RecipeSchema().dump(recipe))
+            recipes.append(RecipeSchema().dump(item))
 
         response_holder["result"] = recipes
 
@@ -983,8 +978,7 @@ class RecipeCreatesResource(Resource):
 
         recipes = []
         for item in query.paginate(page, page_size):
-            recipe = model_to_dict(item, backrefs=True, recurse=True, manytomany=True)
-            recipes.append(RecipeSchema().dump(recipe))
+            recipes.append(RecipeSchema().dump(item))
 
         response_holder["result"] = recipes
 
