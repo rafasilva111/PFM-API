@@ -31,6 +31,7 @@ ENDPOINT = "/comment"
 @api.route("/list")
 class CommentsListResource(Resource):
 
+    @jwt_required()
     def get(self):
         """List all comments"""
 
@@ -39,9 +40,10 @@ class CommentsListResource(Resource):
 
         args = parser.parse_args()
 
-        recipe_id = args['recipe_id']
+        recipe_id = args.get('recipe_id')
+        client_id = args.get('client_id')
         page = int(args['page']) if args['page'] else 1
-        page_size = int(args['page_size']) if args['page_size'] else 20
+        page_size = int(args['page_size']) if args['page_size'] else 10
 
         # validate args
 
@@ -63,6 +65,38 @@ class CommentsListResource(Resource):
             # build query
 
             query = CommentDB.select().where(CommentDB.recipe == recipe_id).order_by(CommentDB.created_date.desc())
+
+            # metadata
+
+            total_comments = int(query.count())
+            total_pages = math.ceil(total_comments / page_size)
+            metadata = build_metadata(page, page_size, total_pages, total_comments, ENDPOINT)
+            response_holder["_metadata"] = metadata
+
+            # response data
+
+            comments = []
+            for item in query.paginate(page, page_size):
+                comments.append(CommentSchema().dump(item))
+
+            response_holder["result"] = comments
+
+            log.info("Finished GET /comment/list with recipe id")
+            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+        elif client_id:
+
+            user_id = get_jwt_identity()
+
+            if client_id != user_id:
+                return Response(status=400, response="Invalid arguments...")
+
+            # declare response holder
+
+            response_holder = {}
+
+            # build query
+
+            query = CommentDB.select().where(CommentDB.user == client_id).order_by(CommentDB.updated_date.desc())
 
             # metadata
 
@@ -122,6 +156,7 @@ class CommentResource(Resource):
 
         if not args["id"]:
             return Response(status=400, response="Invalid arguments...")
+
 
         # Get and Serialize db model
 

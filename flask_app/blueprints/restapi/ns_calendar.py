@@ -8,7 +8,6 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
 
-
 from ...classes.functions import parse_date, add_days
 from ...classes.models import Recipe as RecipeDB, User as UserDB, \
     CalendarEntry, TokenBlocklist, RecipeIngredientQuantity, Recipe
@@ -112,8 +111,6 @@ class CalendarListResource(Resource):
 
         else:
             query = CalendarEntry.select()
-
-
 
         # metadata
 
@@ -338,7 +335,8 @@ class CalendarResource(Resource):
 
         # check if user exists
         try:
-            calender_entry_patch = CalendarEntry.get((CalendarEntry.id == calender_entry_id) & (CalendarEntry.user == user_id))
+            calender_entry_patch = CalendarEntry.get(
+                (CalendarEntry.id == calender_entry_id) & (CalendarEntry.user == user_id))
         except peewee.DoesNotExist:
             # Otherwise block user token (user cant be logged in and still reach this far)
             jti = get_jwt()["jti"]
@@ -360,9 +358,11 @@ class CalendarResource(Resource):
 
         for key, value in calender_entry_validated.items():
             if value is not None:
-                if key == 'realization_date':  ## alterar apenas as horas
-                    helper_value = calender_entry_patch.realization_date.replace(hour=value.hour, minute=value.minute)
-                    setattr(calender_entry_patch, key, helper_value)
+                if key == 'realization_date':
+                    if datetime.now() > calender_entry_validated[key]:
+                        return Response(status=400, response="Realization date supplied, can't be in the past.")
+
+                    calender_entry_patch.realization_date = calender_entry_validated[key]
                 else:
                     setattr(calender_entry_patch, key, value)
 

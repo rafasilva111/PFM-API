@@ -23,8 +23,10 @@ parser = api.parser()
 parser.add_argument('page', type=int, help='The page number.')
 parser.add_argument('page_size', type=int, help='The page size.')
 parser.add_argument('id', type=int, help='The recipe id to be search.')
-parser.add_argument('string', type=str, help='The string to be search.')
+parser.add_argument('searchString', type=str, help='The string to be search.')
+parser.add_argument('searchTag', type=str, help='The tag to be search.')
 parser.add_argument('user_id', type=int, help='The user id to be search.')
+parser.add_argument('commented_by', type=int, help='The user id to be search.')
 parser.add_argument('by', type=str, help='Type of background sort type.')
 
 ENDPOINT = "/recipe"
@@ -33,6 +35,7 @@ ENDPOINT = "/recipe"
 ## Measuring constants
 
 class RECIPES_SORTING_TYPE(Enum):
+    VERIFIED = "VERIFIED"
     DATE = "DATE"
     LIKES = "LIKES"
     SAVES = "SAVES"
@@ -74,11 +77,8 @@ class RecipeListResource(Resource):
         # query building
 
         # Pesquisa por String
-        if args['string']:
 
-            query = RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB) \
-                .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string']))
-        elif args['user_id']:
+        if args['user_id']:
 
             # validate if client profile is public
             try:
@@ -87,13 +87,38 @@ class RecipeListResource(Resource):
                 return Response(status=400, response="There is no user whit that id.")
 
             query = RecipeDB.select().where(RecipeDB.created_by == user)
+        elif args['commented_by']:
+
+            # validate if client profile is public
+            try:
+                user = UserDB.get_by_id(args['commented_by'])
+            except peewee.DoesNotExist:
+                return Response(status=400, response="There is no user whit that id.")
+
+            query = (Recipe
+                     .select()
+                     .distinct()
+                     .join(Comment)
+                     .join(User)
+                     .where(Comment.user == args['commented_by']))
         else:
             # pesquisa normal
             query = RecipeDB.select()
 
+        if args['searchString']:
+            query = (query
+                     .where((RecipeDB.title.contains(args['searchString'])) | (RecipeDB.id == args['searchString'])))
+
+        if args['searchTag']:
+            query = (query
+                     .switch(Recipe)
+                     .join(RecipeTagThroughDB).join(TagDB)
+                     .where(TagDB.title.contains(args['searchTag'])))
+
         # Check if sorted
 
         if by:
+
             if by == RECIPES_SORTING_TYPE.DATE.value:
 
                 query = query.order_by(RecipeDB.created_date)
@@ -101,17 +126,11 @@ class RecipeListResource(Resource):
             elif by == RECIPES_SORTING_TYPE.RANDOM.value:
 
                 query = query.order_by(peewee.fn.Rand())
-            elif by == RECIPES_SORTING_TYPE.LIKES.value and args['string']:
+            elif by == RECIPES_SORTING_TYPE.VERIFIED.value:
 
-                likes_subquery = (RecipeBackground
-                                  .select(peewee.fn.COUNT(RecipeBackground.id))
-                                  .where((RecipeBackground.recipe == RecipeDB.id) &
-                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value))
-                                  .alias('likes'))
-
-                query = (RecipeDB
-                         .select(RecipeDB, likes_subquery)
-                         .order_by(peewee.SQL('likes').desc()))
+                query = (query
+                         .where(RecipeDB.verified == True)
+                         .order_by(RecipeDB.created_date))
             elif by == RECIPES_SORTING_TYPE.LIKES.value:
 
                 likes_subquery = (RecipeBackground
@@ -120,31 +139,19 @@ class RecipeListResource(Resource):
                                          (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value))
                                   .alias('likes'))
 
-                query = (RecipeDB
+                query = (query
                          .select(RecipeDB, likes_subquery)
                          .order_by(peewee.SQL('likes').desc()))
-            elif by == RECIPES_SORTING_TYPE.SAVES.value and args['string']:
-
-                likes_subquery = (RecipeBackground
-                                  .select(peewee.fn.COUNT(RecipeBackground.id))
-                                  .where((RecipeBackground.recipe == RecipeDB.id) &
-                                         (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value))
-                                  .alias('saves'))
-
-                query = RecipeDB.select(RecipeDB, likes_subquery).distinct().join(RecipeTagThroughDB).join(TagDB) \
-                    .where(TagDB.title.contains(args['string']) | RecipeDB.title.contains(args['string'])).order_by(
-                    peewee.SQL('saves').desc())
-
             elif by == RECIPES_SORTING_TYPE.SAVES.value:
 
-                saves_subquery = (RecipeBackground
+                likes_subquery = (RecipeBackground
                                   .select(peewee.fn.COUNT(RecipeBackground.id))
                                   .where((RecipeBackground.recipe == RecipeDB.id) &
                                          (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.SAVED.value))
                                   .alias('saves'))
 
-                query = (RecipeDB
-                         .select(RecipeDB, saves_subquery)
+                query = (query
+                         .select(RecipeDB, likes_subquery)
                          .order_by(peewee.SQL('saves').desc()))
 
         # metadata
@@ -294,7 +301,8 @@ class RecipeResource(Resource):
                         ingredient.save()
                     if i['quantity_original']:
                         try:
-                            units_normalized, quantity_normalized,extra_quantity_normalized,extra_units = normalize_quantity(i['quantity_original'])
+                            units_normalized, quantity_normalized, extra_quantity_normalized, extra_units = normalize_quantity(
+                                i['quantity_original'])
                         except Exception as e:
                             recipe.delete_instance(recursive=True)
                             log.error("Tags Table has some error...")
