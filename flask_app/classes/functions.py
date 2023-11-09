@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import requests
 from flask_jwt_extended import get_jwt, jwt_required
 
-from .models import UNITS_TYPE, NOTIFICATION_TYPE, TokenBlocklist
+from .models import UNITS_TYPE, NOTIFICATION_TYPE, TokenBlocklist, Notification
 from ..ext.logger import log
 import re
 
@@ -199,19 +199,31 @@ notification_model = {
 headers = {'Content-Type': 'application/json', 'Authorization': f'key={FCM_SERVER_KEY}'}
 
 
-def push_notification(fmc_token, notification_type):
+def push_notification(reciever_user, notification_type):
     if notification_type == NOTIFICATION_TYPE.FOLLOWED_USER.value:
+        title = "Follow"
+        message = "You have a new follower"
 
-        notification_model['data']['title'] = "Follow"
-        notification_model['data']['message'] = "You have a new follower"
-        notification_model['to'] = fmc_token
+        notifcation_entry = Notification(title=title, message=message, user=reciever_user, type=notification_type)
+        notifcation_entry.save()
+
+        notification_model['data']['title'] = title
+        notification_model['data']['message'] = message
+        notification_model['to'] = reciever_user.fmc_token
     elif notification_type == NOTIFICATION_TYPE.FOLLOW_REQUEST.value:
 
-        notification_model['data']['title'] = "Follow request"
-        notification_model['data']['message'] = "You have a new follow request"
-        notification_model['to'] = fmc_token
+        title = "Follow request"
+        message = "You have a new follow request"
+
+        notifcation_entry = Notification(title=title, message=message, user=reciever_user, type=notification_type)
+        notifcation_entry.save()
+
+        notification_model['data']['title'] = title
+        notification_model['data']['message'] = message
+        notification_model['to'] = reciever_user.fmc_token
 
     requests.post('https://fcm.googleapis.com/fcm/send', json=notification_model, headers=headers)
+
 
 
 @jwt_required()

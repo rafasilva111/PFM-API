@@ -3,6 +3,7 @@ from abc import ABC
 from datetime import datetime
 from enum import Enum
 
+from marshmallow import EXCLUDE
 from playhouse.shortcuts import ReconnectMixin
 
 from peewee import TextField, FloatField, CharField, DateTimeField, BooleanField, IntegerField, BlobField, \
@@ -239,6 +240,17 @@ class Comment(BaseModel):
     updated_date = DateTimeField(default=datetime.now, null=False)
 
 
+class RecipeReport(BaseModel):
+    title = CharField(null=False)
+    message = CharField(null=False)
+    recipe = ForeignKeyField(Recipe, backref='reports', on_delete="CASCADE")
+    user = ForeignKeyField(User, backref='recipe_reports')
+    created_date = DateTimeField(default=datetime.now, null=False)
+
+    class Meta:
+        db_table = 'recipe_report'
+
+
 """ Calendar """
 
 
@@ -273,9 +285,9 @@ class ShoppingIngredient(BaseModel):
     shopping_list = ForeignKeyField(ShoppingList, backref='shopping_ingredients', on_delete="CASCADE")
     checked = BooleanField(default=False)
     quantity = FloatField(null=False)
-    extra_quantity = FloatField(null=True,default=None)
+    extra_quantity = FloatField(null=True, default=None)
     units = CharField(default="G")
-    extra_units = CharField(null=True,default=None)
+    extra_units = CharField(null=True, default=None)
 
     class Meta:
         db_table = "shopping_ingredient"
@@ -289,7 +301,15 @@ class Notification(BaseModel):
     message = CharField(null=False)
     user = ForeignKeyField(User, backref='notifications')
     created_date = DateTimeField(default=datetime.now, null=False)
-    updated_date = DateTimeField(default=datetime.now, null=False)
+    seen = BooleanField(default=False)
+    type = IntegerField(default=-1)
+
+
+class ApplicationReport(BaseModel):
+    title = CharField(null=False)
+    message = CharField(null=False)
+    user = ForeignKeyField(User, backref='aplication_report')
+    created_date = DateTimeField(default=datetime.now, null=False)
 
 
 class TokenBlocklist(BaseModel):

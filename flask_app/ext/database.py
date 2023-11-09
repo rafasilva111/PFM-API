@@ -9,8 +9,6 @@ database = os.environ.get('MYSQL_DATABASE') if os.environ.get('MYSQL_DATABASE') 
 host = os.environ.get('MYSQL_HOST') if os.environ.get('MYSQL_HOST') else "localhost"
 
 
-
-
 class ReconectMySQLDatabase(ReconnectMixin, MySQLDatabase):
     pass
 
@@ -20,7 +18,7 @@ db = ReconectMySQLDatabase(database=database, user=user, password=password,
 
 models = [TokenBlocklist, NutritionInformation, Recipe, RecipeBackground, Tag, User, RecipeTagThrough, Comment, Follow,
           Ingredient, RecipeIngredientQuantity, CalendarEntry, FollowRequest, Notification, ShoppingIngredient,
-          ShoppingList]
+          ShoppingList,RecipeReport]
 
 
 class Database(object):
@@ -45,18 +43,17 @@ class Database(object):
         super_user_password = os.environ.get('SUPER_USER_PASSWORD') if os.environ.get('SUPER_USER_PASSWORD') else "root"
         try:
             super_user = User.create(**UserSchema().load({
-                "name":"John Doe",
-                "birth_date":"15/03/2000",
-                "email":super_user_email,
-                "password":super_user_password,
-                "description":"",
-                "user_type":"A"
+                "name": "John Doe",
+                "birth_date": "15/03/2000",
+                "email": super_user_email,
+                "password": super_user_password,
+                "description": "",
+                "user_type": "A"
             }))
+            super_user.age = 1
             super_user.save()
         except IntegrityError:
             pass
-
-
 
     def connect_db(self):
         if self.db.is_closed():

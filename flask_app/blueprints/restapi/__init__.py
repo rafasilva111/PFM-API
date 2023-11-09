@@ -13,6 +13,7 @@ from .ns_comment import api as api_comment,ENDPOINT as COMMENT_ENDPOINT
 from .ns_follow import api as api_follow,ENDPOINT as FOLLOW_ENDPOINT
 from .ns_calendar import api as api_calendar,ENDPOINT as CALENDAR_ENDPOINT
 from .ns_shopping_list import api as api_shopping_list,ENDPOINT as SHOPPING_LIST_ENDPOINT
+from .ns_notifications import api as api_notifications,ENDPOINT as NOTIFICATIONS_ENDPOINT
 
 from .bp_auth import auth_blueprint
 from .bp_admin import admin_blueprint
@@ -35,6 +36,7 @@ api.add_namespace(api_follow, path=FOLLOW_ENDPOINT)
 api.add_namespace(api_calendar, path=CALENDAR_ENDPOINT)
 api.add_namespace(api_shopping_list, path=SHOPPING_LIST_ENDPOINT)
 api.add_namespace(api_admin_company, path=ENDPOINT_COMPANY)
+api.add_namespace(api_notifications, path=NOTIFICATIONS_ENDPOINT)
 
 def init_app(app):
     app.register_blueprint(bp)

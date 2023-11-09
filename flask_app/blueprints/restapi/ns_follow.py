@@ -9,8 +9,8 @@ from flask_restx import Namespace, Resource
 
 from ...classes.functions import push_notification
 from ...classes.models import TokenBlocklist, Comment as CommentDB, Follow as FollowDB, User as UserDB, PROFILE_TYPE, \
-    FollowRequest as FollowRequestDB, NOTIFICATION_TYPE
-from ...classes.schemas import CommentSchema, build_metadata, UserSimpleSchema
+    FollowRequest as FollowRequestDB, NOTIFICATION_TYPE, USER_TYPE
+from ...classes.schemas import CommentSchema, build_metadata, UserSimpleSchema, UserToFollow
 from ...ext.logger import log
 
 # Create name space
@@ -22,12 +22,83 @@ parser = api.parser()
 parser.add_argument('page', type=int, help='The page number.')
 parser.add_argument('page_size', type=int, help='The page size.')
 parser.add_argument('id', type=int, help='The id to be search.')
+parser.add_argument('searchString', type=str, help='The id to be search.')
 parser.add_argument('user_id', type=int, help='The user id to be search.')
 parser.add_argument('user_follower_id', type=int, help='The user id to be search.')
-parser.add_argument('user_followed_id', type=int, help='The user id to be search.')
+parser.add_argument('user_follow_id', type=int, help='The user id to be search.')
 parser.add_argument('follow_request_id', type=int, help='The user id to be search.')
 
 ENDPOINT = "/follow"
+
+
+@api.route("/find")
+class FollowsListResource(Resource):
+
+    @jwt_required()
+    def get(self):
+        """List all comments"""
+
+        log.info("GET /find")
+
+        # gets user auth id
+
+        user_logged_id = get_jwt_identity()
+
+        # Get args
+
+        args = parser.parse_args()
+
+        page = int(args['page']) if args['page'] else 1
+        page_size = int(args['page_size']) if args['page_size'] else 10
+
+        # validate args
+
+        if page <= 0:
+            log.error("page cant be negative")
+            return Response(status=400, response="page cant be negative")
+        if page_size not in [5, 10, 20, 40]:
+            log.error("page_size not in [5, 10, 20, 40]")
+            return Response(status=400, response="page_size not in [5, 10, 20, 40]")
+
+        # query
+
+        query = UserDB.select().where(((UserDB.user_type != USER_TYPE.ADMIN.value) & (UserDB.id != user_logged_id))
+                                      & UserDB.id.not_in(
+            FollowDB.select(FollowDB.followed).where(FollowDB.follower == user_logged_id)))
+
+        if args['searchString'] and args['searchString'] != "":
+            query = (query
+                     .where((UserDB.name.contains(args['searchString'])) | (UserDB.id == args['searchString'])))
+
+        # query for follow request
+        query_helper = FollowRequestDB.select(FollowRequestDB.followed).where(
+            FollowRequestDB.follower == user_logged_id)
+
+        existing_ids = [item.followed.id for item in query_helper]
+
+        # declare response holder
+
+        response_holder = {}
+
+        # metadata
+
+        total_comments = int(query.count())
+        total_pages = math.ceil(total_comments / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_comments, ENDPOINT)
+        response_holder["_metadata"] = metadata
+
+        # response data
+
+        response_holder["result"] = []
+
+        for item in query.paginate(page, page_size):
+            if item.id in existing_ids:
+                response_holder["result"].append(UserToFollow().dump({"user": item, "request_sent": True}))
+            else:
+                response_holder["result"].append(UserToFollow().dump({"user": item, "request_sent": False}))
+
+        log.info("Finish GET /find")
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 
 # Create resources
@@ -308,27 +379,27 @@ class FollowResource(Resource):
             follow_request, created = FollowRequestDB.get_or_create(follower=user, followed=user_to_be_followed)
             if not created:
                 log.error("User already follows this account.")
-                return Response(status=200, response="User already follows this account.")
+                return Response(status=400, response="User already follows this account.")
 
             # send new follow request notification to recipient
-            push_notification(fmc_token=user_to_be_followed.fmc_token,
+            push_notification(reciever_user=user_to_be_followed,
                               notification_type=NOTIFICATION_TYPE.FOLLOW_REQUEST.value)
 
             log.info("Finish POST /follow")
+            return Response(status=200, response="REQUEST_SENDED")
 
         else:
             follow, created = FollowDB.get_or_create(follower=user, followed=user_to_be_followed)
 
             # send new follow notification to recipient
-            push_notification(fmc_token=user_to_be_followed.fmc_token, notification_type=NOTIFICATION_TYPE.FOLLOWED_USER.value)
+            push_notification(reciever_user=user_to_be_followed,
+                              notification_type=NOTIFICATION_TYPE.FOLLOWED_USER.value)
 
             if not created:
                 log.error("User already follows this account.")
-                return Response(status=200, response="User already follows this account.")
+                return Response(status=400, response="User already follows this account.")
 
-        log.info("Finish POST /follow")
-
-        return Response(status=201)
+            return Response(status=201, response="FOLLOWED")
 
     @jwt_required()
     def delete(self):
@@ -345,7 +416,7 @@ class FollowResource(Resource):
         args = parser.parse_args()
 
         user_follower_id = args['user_follower_id'] if args['user_follower_id'] else None
-        user_followed_id = args['user_followed_id'] if args['user_followed_id'] else None
+        user_followed_id = args['user_follow_id'] if args['user_follow_id'] else None
 
         # Validate args
 
@@ -383,7 +454,7 @@ class FollowAcceptResource(Resource):
 
     @jwt_required()
     def post(self):
-        """ Post a follow by user """
+        """ Accept a follow request by user """
 
         log.info("POST /requests")
 
@@ -417,9 +488,8 @@ class FollowAcceptResource(Resource):
         follow = FollowDB.create(follower=follow_request.follower, followed=follow_request.followed)
         follow.save()
 
-
         # send new follow notification to recipient
-        push_notification(fmc_token=follow_request.followed.fmc_token,
+        push_notification(reciever_user=follow_request.followed,
                           notification_type=NOTIFICATION_TYPE.FOLLOWED_USER.value)
 
         # delete the request
@@ -432,7 +502,7 @@ class FollowAcceptResource(Resource):
 
     @jwt_required()
     def delete(self):
-        """Delete a follow by ID"""
+        """Delete a follow request by ID"""
 
         log.info("DELETE /requests")
 
@@ -445,7 +515,7 @@ class FollowAcceptResource(Resource):
         args = parser.parse_args()
 
         user_follower_id = args['user_follower_id'] if args['user_follower_id'] else None
-        user_followed_id = args['user_followed_id'] if args['user_followed_id'] else None
+        user_followed_id = args['user_follow_id'] if args['user_follow_id'] else None
 
         # Validate args
 
@@ -504,9 +574,6 @@ class FollowAcceptResource(Resource):
         if page <= 0:
             log.error("page cant be negative")
             return Response(status=400, response="page cant be negative")
-        if page_size not in [5, 10, 20, 40]:
-            log.error("page_size not in [5, 10, 20, 40]")
-            return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
         # declare response holder
 

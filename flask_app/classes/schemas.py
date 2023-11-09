@@ -239,6 +239,21 @@ class TagSchema(ma.Schema):
         fields = ('__all__',)
 
 
+class RecipeReportSchema(ma.Schema):
+    id = fields.Integer(dump_only=True)
+    title = fields.String(required=True)
+    message = fields.String(required=True)
+
+    recipe = fields.Nested(RecipeSchema, dump_only=True)
+    user = fields.Nested(UserSimpleSchema, dump_only=True)
+
+    created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
 ''' User '''
 
 
@@ -270,7 +285,7 @@ class UserSchema(ma.Schema):
     height = fields.Float(default=-1)
     sex = fields.String(validate=lambda x: x in SEXES)
     weight = fields.Float(default=-1)
-    age = fields.Integer(dump_only=True,default=0)
+    age = fields.Integer(dump_only=True, default=0)
 
     created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
     updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
@@ -359,8 +374,8 @@ class UserPerfilSchema(ma.Schema):
 class CommentSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     text = fields.String(required=True, null=False)
-    user = fields.Nested(UserSchema,dump_only=True)
-    recipe = fields.Nested(RecipeSimpleSchema,dump_only=True)
+    user = fields.Nested(UserSchema, dump_only=True)
+    recipe = fields.Nested(RecipeReportSchema, dump_only=True)
     created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
     updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
 
@@ -487,7 +502,29 @@ class ShoppingListSchema(ma.Schema):
         ordered = True
 
 
+class UserToFollow(ma.Schema):
+    request_sent = fields.Boolean(default=False)
+    user = fields.Nested(UserSimpleSchema, required=True)
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
 ''' Miscellanius '''
+
+
+class NotificationSchema(ma.Schema):
+    id = fields.Integer(required=False)
+    title = fields.String(required=False, allow_none=True)
+    message = fields.String(required=False, allow_none=True)
+    user = fields.String(required=False, allow_none=True)
+    created_date = fields.DateTime(format='%d/%m/%YT%H:%M:%S', required=False, dump_only=True)
+    seen = fields.Boolean(default=False)
+    type = fields.Integer(required=False)
+
+    class Meta:
+        unknown = EXCLUDE
 
 
 class LoginSchema(ma.Schema):

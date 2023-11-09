@@ -85,13 +85,17 @@ class UserListResource(Resource):
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
         else:
 
+            # query
+
+            query = UserDB.select().where(UserDB.user_type != USER_TYPE.ADMIN.value)
+
             # declare response holder
 
             response_holder = {}
 
             # metadata
 
-            total_users = int(UserDB.select().count())
+            total_users = int(query.count())
             total_pages = math.ceil(total_users / page_size)
             metadata = build_metadata(page, page_size, total_pages, total_users, ENDPOINT)
             response_holder["_metadata"] = metadata
@@ -99,8 +103,8 @@ class UserListResource(Resource):
             # response data
 
             recipes = []
-            for item in UserDB.select().paginate(page, page_size):
-                recipes.append(UserSchema().dump(item))
+            for item in query.paginate(page, page_size):
+                recipes.append(UserSimpleSchema().dump(item))
 
             response_holder["result"] = recipes
 
@@ -167,7 +171,7 @@ class UserResource(Resource):
 
     @jwt_required()
     def delete(self):
-        """Delete a user by ID"""
+        """Delete a user"""
 
         log.info("DELETE /user")
 

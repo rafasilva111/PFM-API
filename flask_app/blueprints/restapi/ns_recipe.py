@@ -1118,3 +1118,61 @@ class RecipeListResource(Resource):
 
         log.info("Finished POST /recipe/list")
         return Response(status=201)
+
+
+@api.route("/report")
+class RecipeListResource(Resource):
+
+    @jwt_required()
+    def post(self):
+        """ Used to post a report on a recipe"""
+
+        # logging
+        log.info("POST /recipe/admin")
+
+        # Get args
+
+        args = parser.parse_args()
+
+        # validate args
+        if args['id'] is None:
+            log.error("Id must be supplied.")
+            return Response(status=400, response="Id must be supplied.")
+
+        json_data = request.get_json()
+
+        ## validate entities
+
+        user_id = get_jwt_identity()
+
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and stil reach this far)
+            # this only occurs when accounts are not in db, so in prod this wont happen
+            block_user_session_id()
+            log.error("User couln't be found.")
+            return Response(status=400, response="User couln't be found.")
+
+        try:
+            recipe = Recipe.get(args['id'])
+        except peewee.DoesNotExist:
+            log.error("Recipe couln't be found.")
+            return Response(status=400, response="User couln't be found.")
+
+        # Validate args by loading it into schema
+
+        try:
+            recipe_report_validated = RecipeReportSchema().load(json_data)
+        except ValidationError as err:
+            return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
+
+        recipe_report = RecipeReport(**recipe_report_validated)
+
+        recipe_report.user = user
+        recipe_report.recipe = recipe
+
+        recipe_report.save()
+
+        log.info("Finished POST /recipe/list")
+        return Response(status=201)
