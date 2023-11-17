@@ -11,7 +11,7 @@ from marshmallow import ValidationError
 from .errors import return_error_sql
 from ...classes.functions import block_user_session_id
 from ...classes.models import User as UserDB, ShoppingList as ShoppingListDB, \
-    ShoppingIngredient as ShoppingIngredientDB, Ingredient as IngredientDB, USER_TYPE, Notification
+    ShoppingIngredient as ShoppingIngredientDB, Ingredient as IngredientDB, USER_TYPE, Notification as NotificationDB
 from ...classes.schemas import ShoppingListSchema, build_metadata, ShoppingListPatchSchema, NotificationSchema
 from ...ext.logger import log
 
@@ -47,7 +47,7 @@ class ShoppingListResource(Resource):
 
         response_holder = {}
 
-        query = Notification.select().where((Notification.user == user)).order_by(Notification.created_date)
+        query = NotificationDB.select().where((NotificationDB.user == user)).order_by(NotificationDB.created_date.desc())
         total_shopping_lists = int(query.count())
         total_pages = math.ceil(total_shopping_lists / page_size)
         metadata = build_metadata(page, page_size, total_pages, total_shopping_lists, ENDPOINT)
@@ -72,9 +72,6 @@ class ShoppingListResource(Resource):
         log.info("Entering GET /notification endpoint")
         args = parser.parse_args()
         user_id = get_jwt_identity()
-        page = args['page'] if args['page'] else 1
-        page_size = args['page_size'] if args['page_size'] else 5
-        page_size = args['id'] if args['page_size'] else 5
 
         # gets recipe id
         notification_id = args["id"]
@@ -91,7 +88,7 @@ class ShoppingListResource(Resource):
 
 
         try:
-            query = Notification.get((Notification.user == user) & (Notification.id == notification_id))
+            query = NotificationDB.get((NotificationDB.user == user) & (NotificationDB.id == notification_id))
         except peewee.DoesNotExist:
             log.error("Notification couldn't be found.")
             return Response(status=400, response="Notification couldn't be found.")
@@ -122,8 +119,8 @@ class ShoppingListResource(Resource):
             return Response(status=400, response=f'User couldnt be found by this id: {user_id}.')
 
         try:
-            notification = Notification.get(
-                (Notification.id == args["id"]) & (Notification.user == user_query))
+            notification = NotificationDB.get(
+                (NotificationDB.id == args["id"]) & (NotificationDB.user == user_query))
         except peewee.DoesNotExist:
             log.error("Shopping list couldn't be found by this id.")
             return Response(status=400, response=f'Shopping list couldnt be found by this id: {args["id"]}')
@@ -164,7 +161,7 @@ class ShoppingListResource(Resource):
             return Response(status=400, response="Invalid arguments: 'id' is missing.")
 
         try:
-            notification_model = Notification.get(id=args["id"], user=user_model.id)
+            notification_model = NotificationDB.get(id=args["id"], user=user_model.id)
         except peewee.DoesNotExist:
             log.error("Notification does not exist.")
             return Response(status=400, response="Shopping list does not exist.")
@@ -175,5 +172,74 @@ class ShoppingListResource(Resource):
 
         return Response(status=204)
 
+@api.route('/delete')
+class Notification(Resource):
+
+    @jwt_required()
+    def post(self):
+        """ Used to delete a notification's list """
+
+        # Get json data
+
+        log.info("POST /notification/delete")
+
+        json_data = request.get_json()
+
+        # validate body
+
+        if json_data['id_list'] is None:
+            log.error("Id_list must be supplied.")
+            return Response(status=400, response="Id_list must be supplied.")
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # delete
+
+        try:
+            query = NotificationDB.delete().where(NotificationDB.id.in_(json_data['id_list']) & (NotificationDB.user == user_id))
+            query.execute()
+        except peewee.DoesNotExist:
+
+            return Response(status=400, response="Unable to delete this notifications...")
+
+        log.info("POST /notification/delete")
+        return Response(status=204)
 
 
+
+@api.route('/seen')
+class Notification(Resource):
+
+    @jwt_required()
+    def post(self):
+
+        """ Used to update state seen of a notification's list """
+        # Get json data
+
+        log.info("POST /auth/login")
+
+        json_data = request.get_json()
+
+        # validate body
+
+        if json_data['id_list'] is None:
+            log.error("Id_list must be supplied.")
+            return Response(status=400, response="Id_list must be supplied.")
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # delete
+
+        try:
+            query = NotificationDB.update(seen=True).where((NotificationDB.id.in_(json_data['id_list'])) & (NotificationDB.user == user_id))
+            query.execute()
+        except peewee.DoesNotExist:
+
+            return Response(status=400, response="Unable to update this notifications...")
+
+        log.info("DELETE /notification/seen")
+        return Response(status=200)

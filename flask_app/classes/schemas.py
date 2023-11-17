@@ -526,6 +526,22 @@ class NotificationSchema(ma.Schema):
     class Meta:
         unknown = EXCLUDE
 
+class ApplicationReport(BaseModel):
+    title = CharField(null=False)
+    message = CharField(null=False)
+    user = ForeignKeyField(User, backref='aplication_report')
+    created_date = DateTimeField(default=datetime.now, null=False)
+
+
+class ApplicationReportSchema(ma.Schema):
+    id = fields.Integer(dump_only=True)
+    title = fields.String(required=True)
+    message = fields.String(required=True)
+    archived = fields.Boolean(dump_only=True)
+    user = fields.Nested(UserSimpleSchema, dump_only=True)
+    created_date = fields.DateTime(format='%d/%m/%YT%H:%M:%S', dump_only=True)
+
+
 
 class LoginSchema(ma.Schema):
     email = fields.Email(required=True)

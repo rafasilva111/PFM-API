@@ -129,7 +129,7 @@ class RecipeListResource(Resource):
             elif by == RECIPES_SORTING_TYPE.VERIFIED.value:
 
                 query = (query
-                         .where(RecipeDB.verified == True)
+                         .where(RecipeDB.verified is True)
                          .order_by(RecipeDB.created_date))
             elif by == RECIPES_SORTING_TYPE.LIKES.value:
 

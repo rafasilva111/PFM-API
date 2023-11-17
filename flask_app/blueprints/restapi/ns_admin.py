@@ -14,7 +14,6 @@ from ...classes.schemas import UserSchema
 
 from ...classes.models import User as UserDB, USER_TYPE, PROFILE_TYPE
 
-admin_blueprint = Blueprint('admin_blueprint', __name__, url_prefix="/api/v1")
 from ...ext.logger import log
 
 
@@ -25,7 +24,7 @@ parser.add_argument('page', type=int, help='The page number.')
 parser.add_argument('page_size', type=int, help='The page size.')
 parser.add_argument('id', type=int, help='The id to be search.')
 
-ENDPOINT_COMPANY = "/admin/company"
+ENDPOINT = "/admin/company"
 
 
 @api.route("")

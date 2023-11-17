@@ -28,6 +28,7 @@ db = ReconectMySQLDatabase(database=database, user=db_user, password=db_password
 class NOTIFICATION_TYPE(Enum):
     FOLLOWED_USER = 1
     FOLLOW_REQUEST = 2
+    FOLLOW_CREATED_RECIPE = 3
 
 
 NOTIFICATION_TYPE_SET = NOTIFICATION_TYPE._value2member_map_
@@ -309,8 +310,11 @@ class ApplicationReport(BaseModel):
     title = CharField(null=False)
     message = CharField(null=False)
     user = ForeignKeyField(User, backref='aplication_report')
+    archived = BooleanField(default=False)
     created_date = DateTimeField(default=datetime.now, null=False)
 
+    class Meta:
+        db_table = "application_report"
 
 class TokenBlocklist(BaseModel):
     jti = CharField()
@@ -318,3 +322,6 @@ class TokenBlocklist(BaseModel):
 
     class Meta:
         db_table = 'token_block_list'
+
+
+
