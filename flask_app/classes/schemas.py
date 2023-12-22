@@ -359,14 +359,15 @@ class UserPerfilSchema(ma.Schema):
     img_source = fields.String(default="")
     followed_state = fields.String(validate=lambda x: x in FOLLOWED_STATE_SET)
 
+
     class Meta:
         ordered = True
         unknown = EXCLUDE
 
     @pre_dump()
     def follows(self, data, **kwargs):
-        data['followers'] = len(data['followers'])
-        data['followeds'] = len(data['followeds'])
+        data.followers = data.followers.count()
+        data.followeds = data.followeds.count()
 
         return data
 
@@ -449,6 +450,23 @@ class CalendarEntrySchema(ma.Schema):
         ordered = True
         unknown = EXCLUDE
 
+## check multiple calender entrys
+
+class CalenderEntryUpdateSchema(ma.Schema):
+    id = fields.Integer(required=True)
+    state = fields.Boolean(required=True)
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
+class CalenderEntryListUpdateSchema(ma.Schema):
+    calender_entry_state_list = fields.List(fields.Nested(CalenderEntryUpdateSchema, required=True))
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
 
 class CalendarEntrySimpleSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
@@ -549,3 +567,6 @@ class LoginSchema(ma.Schema):
 
     class Meta:
         unknown = EXCLUDE
+
+
+

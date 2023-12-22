@@ -62,13 +62,12 @@ class RecipeListResource(Resource):
         page = args['page'] if args['page'] else 1
         page_size = args['page_size'] if args['page_size'] else 5
         by = str(args['by']) if args['by'] and args['by'] in RECIPES_SORTING_TYPE_SET else None
+        user_id = args['user_id'] if args['user_id'] and args['user_id'] != -1 else None
 
         # validate args
 
         if page <= 0:
             return Response(status=400, response="page cant be negative")
-        if page_size not in [5, 10, 20, 40]:
-            return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
         # declare response holder
 
@@ -78,7 +77,7 @@ class RecipeListResource(Resource):
 
         # Pesquisa por String
 
-        if args['user_id']:
+        if user_id:
 
             # validate if client profile is public
             try:

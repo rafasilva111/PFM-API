@@ -26,7 +26,7 @@ ENDPOINT = "/notification"
 
 
 @api.route("/list")
-class ShoppingListResource(Resource):
+class NotificationResource(Resource):
     @jwt_required()
     def get(self):
         """
@@ -47,7 +47,8 @@ class ShoppingListResource(Resource):
 
         response_holder = {}
 
-        query = NotificationDB.select().where((NotificationDB.user == user)).order_by(NotificationDB.created_date.desc())
+        query = NotificationDB.select().where((NotificationDB.user == user)).order_by(
+            NotificationDB.created_date.desc())
         total_shopping_lists = int(query.count())
         total_pages = math.ceil(total_shopping_lists / page_size)
         metadata = build_metadata(page, page_size, total_pages, total_shopping_lists, ENDPOINT)
@@ -61,8 +62,9 @@ class ShoppingListResource(Resource):
 
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
+
 @api.route("")
-class ShoppingListResource(Resource):
+class NotificationResource(Resource):
 
     @jwt_required()
     def get(self):
@@ -86,13 +88,11 @@ class ShoppingListResource(Resource):
             log.error("User couldn't be found.")
             return Response(status=400, response="User couldn't be found.")
 
-
         try:
             query = NotificationDB.get((NotificationDB.user == user) & (NotificationDB.id == notification_id))
         except peewee.DoesNotExist:
             log.error("Notification couldn't be found.")
             return Response(status=400, response="Notification couldn't be found.")
-
 
         log.info("Exiting GET /notification endpoint")
 
@@ -124,7 +124,6 @@ class ShoppingListResource(Resource):
         except peewee.DoesNotExist:
             log.error("Shopping list couldn't be found by this id.")
             return Response(status=400, response=f'Shopping list couldnt be found by this id: {args["id"]}')
-
 
         try:
             notification_schema = NotificationSchema().load(request.get_json())
@@ -172,8 +171,9 @@ class ShoppingListResource(Resource):
 
         return Response(status=204)
 
-@api.route('/delete')
-class Notification(Resource):
+
+@api.route('/list/delete')
+class NotificationResource(Resource):
 
     @jwt_required()
     def post(self):
@@ -198,7 +198,8 @@ class Notification(Resource):
         # delete
 
         try:
-            query = NotificationDB.delete().where(NotificationDB.id.in_(json_data['id_list']) & (NotificationDB.user == user_id))
+            query = NotificationDB.delete().where(
+                NotificationDB.id.in_(json_data['id_list']) & (NotificationDB.user == user_id))
             query.execute()
         except peewee.DoesNotExist:
 
@@ -208,9 +209,8 @@ class Notification(Resource):
         return Response(status=204)
 
 
-
-@api.route('/seen')
-class Notification(Resource):
+@api.route('/list/seen')
+class NotificationResource(Resource):
 
     @jwt_required()
     def post(self):
@@ -235,10 +235,10 @@ class Notification(Resource):
         # delete
 
         try:
-            query = NotificationDB.update(seen=True).where((NotificationDB.id.in_(json_data['id_list'])) & (NotificationDB.user == user_id))
+            query = NotificationDB.update(seen=True).where(
+                (NotificationDB.id.in_(json_data['id_list'])) & (NotificationDB.user == user_id))
             query.execute()
         except peewee.DoesNotExist:
-
             return Response(status=400, response="Unable to update this notifications...")
 
         log.info("DELETE /notification/seen")

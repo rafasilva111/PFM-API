@@ -67,7 +67,7 @@ class USER_TYPE(Enum):
     NORMAL = "N"
     COMPANY = "C"
     VIP = "V"
-    ADMIN = "A"  # (normal, company, vip, admin)
+    ADMIN = "A"
 
 
 USER_TYPE_SET = USER_TYPE._value2member_map_
@@ -309,7 +309,7 @@ class Notification(BaseModel):
 class ApplicationReport(BaseModel):
     title = CharField(null=False)
     message = CharField(null=False)
-    user = ForeignKeyField(User, backref='aplication_report')
+    user = ForeignKeyField(User, backref='aplication_reports')
     archived = BooleanField(default=False)
     created_date = DateTimeField(default=datetime.now, null=False)
 

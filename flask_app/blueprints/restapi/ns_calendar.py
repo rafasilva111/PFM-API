@@ -13,7 +13,7 @@ from ...classes.models import Recipe as RecipeDB, User as UserDB, \
     CalendarEntry, TokenBlocklist, RecipeIngredientQuantity, Recipe
 from ...classes.schemas import build_metadata, \
     CalendarEntrySimpleSchema, \
-    ShoppingIngredient, CalendarEntrySchema, ShoppingIngredientSchema
+    ShoppingIngredient, CalendarEntrySchema, ShoppingIngredientSchema, CalenderEntryListUpdateSchema
 from ...ext.logger import log
 
 # Create name space
@@ -36,7 +36,7 @@ ENDPOINT = "/calendar"
 
 # Create resources
 @api.route("/list")
-class CalendarListResource(Resource):
+class CalendarResource(Resource):
 
     @jwt_required()
     def get(self):
@@ -129,96 +129,6 @@ class CalendarListResource(Resource):
         response_holder["result"] = calendar_entrys
 
         log.info("Finish GET /calender/list")
-        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
-
-
-@api.route("/ingredients/list")
-class CalendarListResource(Resource):
-
-    @jwt_required()
-    def get(self):
-        """List all ingredients on calender """
-
-        log.info("GET /calendar/list")
-
-        # Get args
-
-        args = parser.parse_args()
-
-        from_date = parse_date(args['from_date']) if args['from_date'] else None
-        to_date = parse_date(args['to_date']) if args['to_date'] else None
-
-        # gets user auth id
-
-        user_logged_id = get_jwt_identity()
-
-        # check if user exists
-        try:
-            user_logged = UserDB.get(user_logged_id)
-        except peewee.DoesNotExist:
-            # Otherwise block user token (user cant be logged in and still reach this far)
-            jti = get_jwt()["jti"]
-            now = datetime.now(timezone.utc)
-            token_block_record = TokenBlocklist(jti=jti, created_at=now)
-            token_block_record.save()
-            log.error("User couldn't be found by this id.")
-            return Response(status=400, response="User couldn't be found by this id.")
-
-        # validate args
-
-        if user_logged.user_portion == -1:
-            return Response(status=400, response="User can't have default's portion to access this.")
-
-        if from_date is None:
-            return Response(status=400, response="From date cant be null")
-
-        if to_date is None:
-            return Response(status=400, response="To date cant be null")
-
-        if from_date > to_date:
-            return Response(status=400, response="From date cant be after to date.")
-
-        # declare response holder
-
-        response_holder = {}
-
-        # query
-
-        query = (RecipeIngredientQuantity
-                 .select()
-                 .join(Recipe)
-                 .join(CalendarEntry)
-                 .where((CalendarEntry.realization_date >= from_date) &
-                        (CalendarEntry.realization_date <= to_date)))
-
-        total_ingredients = {}
-
-        for item in query:
-            ratio = 1
-            if item.recipe.portion and 'pessoas' in item.recipe.portion:
-                portion = int(item.recipe.portion.split(" ")[0])
-                if user_logged.user_portion >= 1:
-                    ratio = user_logged.user_portion / portion
-
-            ingredient_name = item.ingredient.name
-            if ingredient_name in total_ingredients:
-                total_ingredients[ingredient_name]["quantity"] += float(item.quantity_normalized) * ratio
-                if item.extra_quantity:
-                    total_ingredients[ingredient_name]["extra_quantity"] += float(item.extra_quantity) * ratio
-            else:
-                total_ingredients[ingredient_name] = ShoppingIngredientSchema().dump({
-                    "ingredient": item.ingredient,
-                    "quantity": float(item.quantity_normalized) * ratio,
-                    "extra_quantity": float(item.extra_quantity) * ratio if item.extra_quantity else None,
-                    "units": item.units_normalized,
-                    "extra_units": item.extra_units,
-                })
-
-        response_holder["result"] = list(total_ingredients.values())
-
-        # response data
-
-        log.info("Finish GET /ingredients/list")
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 
@@ -404,4 +314,142 @@ class CalendarResource(Resource):
         calendar_entry.delete_instance()
 
         log.info("Finish DELETE /calendar")
+        return Response(status=200)
+
+
+@api.route("/ingredients/list")
+class CalendarResource(Resource):
+
+    @jwt_required()
+    def get(self):
+        """List all ingredients on calender """
+
+        log.info("GET /calendar/list")
+
+        # Get args
+
+        args = parser.parse_args()
+
+        from_date = parse_date(args['from_date']) if args['from_date'] else None
+        to_date = parse_date(args['to_date']) if args['to_date'] else None
+
+        # gets user auth id
+
+        user_logged_id = get_jwt_identity()
+
+        # check if user exists
+        try:
+            user_logged = UserDB.get(user_logged_id)
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and still reach this far)
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            log.error("User couldn't be found by this id.")
+            return Response(status=400, response="User couldn't be found by this id.")
+
+        # validate args
+
+        if user_logged.user_portion == -1:
+            return Response(status=400, response="User can't have default's portion to access this.")
+
+        if from_date is None:
+            return Response(status=400, response="From date cant be null")
+
+        if to_date is None:
+            return Response(status=400, response="To date cant be null")
+
+        if from_date > to_date:
+            return Response(status=400, response="From date cant be after to date.")
+
+        # declare response holder
+
+        response_holder = {}
+
+        # query
+
+        query = (RecipeIngredientQuantity
+                 .select()
+                 .join(Recipe)
+                 .join(CalendarEntry)
+                 .where((CalendarEntry.realization_date >= from_date) &
+                        (CalendarEntry.realization_date <= to_date)))
+
+        total_ingredients = {}
+
+        for item in query:
+            ratio = 1
+            if item.recipe.portion and 'pessoas' in item.recipe.portion:
+                portion = int(item.recipe.portion.split(" ")[0])
+                if user_logged.user_portion >= 1:
+                    ratio = user_logged.user_portion / portion
+
+            ingredient_name = item.ingredient.name
+            if ingredient_name in total_ingredients:
+                total_ingredients[ingredient_name]["quantity"] += float(item.quantity_normalized) * ratio
+                if item.extra_quantity:
+                    total_ingredients[ingredient_name]["extra_quantity"] += float(item.extra_quantity) * ratio
+            else:
+                total_ingredients[ingredient_name] = ShoppingIngredientSchema().dump({
+                    "ingredient": item.ingredient,
+                    "quantity": float(item.quantity_normalized) * ratio,
+                    "extra_quantity": float(item.extra_quantity) * ratio if item.extra_quantity else None,
+                    "units": item.units_normalized,
+                    "extra_units": item.extra_units,
+                })
+
+        response_holder["result"] = list(total_ingredients.values())
+
+        # response data
+
+        log.info("Finish GET /ingredients/list")
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+
+
+@api.route('/list/check')
+class CalendarResource(Resource):
+
+    @jwt_required()
+    def post(self):
+        """ Used to check a notification's list """
+
+        # Get json data
+
+        log.info("POST /list/check")
+
+        json_data = request.get_json()
+
+        # validate body
+
+        try:
+            calenderEntryListUpdateSchema = CalenderEntryListUpdateSchema().load(json_data)
+        except ValidationError as err:
+            return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
+
+        # gets user auth id
+
+        user_id = get_jwt_identity()
+
+        # delete
+
+        checked_done = []
+        checked_removed = []
+        for item in calenderEntryListUpdateSchema['calender_entry_state_list']:
+            if item['state']:
+                checked_done.append(item['id'])
+            else:
+                checked_removed.append(item['id'])
+
+        try:
+            query_done = CalendarEntry.update(checked_done=True).where(
+                (CalendarEntry.id.in_(checked_done)) & (CalendarEntry.user == user_id))
+            query_removed = CalendarEntry.update(checked_done=False).where(
+                (CalendarEntry.id.in_(checked_removed)) & (CalendarEntry.user == user_id))
+            query_done.execute()
+            query_removed.execute()
+        except peewee.DoesNotExist:
+            return Response(status=400, response="Unable to update this notifications...")
+
+        log.info("POST /notification/delete")
         return Response(status=200)

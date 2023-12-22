@@ -145,28 +145,27 @@ class UserResource(Resource):
             log.error("User couldn't be found by this id.")
             return Response(status=400, response="User couldn't be found by this id.")
 
-        user_model = model_to_dict(user, backrefs=True)
 
         is_following = Follow.select(peewee.fn.COUNT(Follow.id)).where(
             (Follow.follower == user_logged_id) & (Follow.followed == user)
         ).scalar() > 0
 
         if is_following:
-            user_model['followed_state'] = FOLLOWED_STATE_SET.FOLLOWED.value
-            return Response(status=200, response=json.dumps(UserPerfilSchema().dump(user_model)),
+            user.followed_state = FOLLOWED_STATE_SET.FOLLOWED.value
+            return Response(status=200, response=json.dumps(UserPerfilSchema().dump(user)),
                             mimetype="application/json")
         is_pending = FollowRequest.select(peewee.fn.COUNT(FollowRequest.id)).where(
             (FollowRequest.follower == user_logged_id) & (FollowRequest.followed == user)
         ).scalar() > 0
 
         if is_pending:
-            user_model['followed_state'] = FOLLOWED_STATE_SET.PENDING_FOLLOWED.value
-            return Response(status=200, response=json.dumps(UserPerfilSchema().dump(user_model)),
+            user.followed_state = FOLLOWED_STATE_SET.PENDING_FOLLOWED.value
+            return Response(status=200, response=json.dumps(UserPerfilSchema().dump(user)),
                             mimetype="application/json")
 
-        user_model['followed_state'] = FOLLOWED_STATE_SET.NOT_FOLLOWED.value
+        user.followed_state = FOLLOWED_STATE_SET.NOT_FOLLOWED.value
 
-        return Response(status=200, response=json.dumps(UserPerfilSchema().dump(user_model)),
+        return Response(status=200, response=json.dumps(UserPerfilSchema().dump(user)),
                         mimetype="application/json")
 
     @jwt_required()
