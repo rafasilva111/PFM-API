@@ -44,6 +44,7 @@ class Database(object):
         try:
             super_user = User.create(**UserSchema().load({
                 "name": "John Doe",
+                "username": "John Doe",
                 "birth_date": "15/03/2000",
                 "email": super_user_email,
                 "password": super_user_password,

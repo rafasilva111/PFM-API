@@ -1,8 +1,9 @@
 import json
 import pickle
 import re
+from datetime import timedelta
 
-from marshmallow import fields, validates, pre_dump, pre_load, EXCLUDE
+from marshmallow import fields, validates, pre_dump, pre_load, ValidationError
 
 from flask_app.classes.models import *
 from flask_app.ext.schema import ma
@@ -260,6 +261,7 @@ class RecipeReportSchema(ma.Schema):
 class UserSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     name = fields.String(required=True)
+    username = fields.String(required=True)
     birth_date = fields.DateTime(format='%d/%m/%Y', required=True)
     email = fields.Email(required=True)
     password = fields.String(load_only=True)
@@ -295,10 +297,21 @@ class UserSchema(ma.Schema):
 
     email_regex = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 
-    @validates('email')
-    def validate_email(self, value):
-        if not self.email_regex.match(value):
-            raise ma.ValidationError('Invalid email address.')
+    @validates('birth_date')
+    def validate_birth_date(self, value):
+        age = (datetime.now() - value) // timedelta(days=365.25)
+        if not age >= 12:
+            raise ValidationError('You must be at least 12 years old')
+
+    @validates('height')
+    def validate_height(self, value):
+        if not (300 > value > 100):
+            raise ValidationError('You must be between 100 cm and 300 cm')
+
+    @validates('weight')
+    def validate_weight(self, value):
+        if not (200 > value > 30):
+            raise ValidationError('You must be between 30 kg and 200 kg')
 
     @pre_load
     def hash_password(self, data, **kwargs):
@@ -346,6 +359,7 @@ class UserPatchSchema(ma.Schema):
 class UserPerfilSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     name = fields.String(required=True)
+    username = fields.String(required=True)
     email = fields.Email(required=True)
 
     followers = fields.Integer(dump_only=True, default=0)
@@ -358,7 +372,6 @@ class UserPerfilSchema(ma.Schema):
     user_type = fields.String(validate=lambda x: x in USER_TYPE_SET)
     img_source = fields.String(default="")
     followed_state = fields.String(validate=lambda x: x in FOLLOWED_STATE_SET)
-
 
     class Meta:
         ordered = True
@@ -450,6 +463,7 @@ class CalendarEntrySchema(ma.Schema):
         ordered = True
         unknown = EXCLUDE
 
+
 ## check multiple calender entrys
 
 class CalenderEntryUpdateSchema(ma.Schema):
@@ -467,6 +481,7 @@ class CalenderEntryListUpdateSchema(ma.Schema):
     class Meta:
         unknown = EXCLUDE
         ordered = True
+
 
 class CalendarEntrySimpleSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
@@ -544,6 +559,7 @@ class NotificationSchema(ma.Schema):
     class Meta:
         unknown = EXCLUDE
 
+
 class ApplicationReport(BaseModel):
     title = CharField(null=False)
     message = CharField(null=False)
@@ -560,13 +576,9 @@ class ApplicationReportSchema(ma.Schema):
     created_date = fields.DateTime(format='%d/%m/%YT%H:%M:%S', dump_only=True)
 
 
-
 class LoginSchema(ma.Schema):
     email = fields.Email(required=True)
     password = fields.Str(required=True)
 
     class Meta:
         unknown = EXCLUDE
-
-
-

@@ -130,21 +130,28 @@ class UserResource(Resource):
         args = parser.parse_args()
 
         id = args['id']
+        string = args['string']
 
         # Validate args
-        if not id:
-            log.error("Missing user id argument.")
-            return Response(status=400, response="Missing user id argument.")
-
-        try:
-            user = UserDB.get(id=id)
-            log.info("Finished GET /user")
+        if id:
+            try:
+                user = UserDB.get(id=id)
+                log.info("Finished GET /user")
 
 
-        except peewee.DoesNotExist:
-            log.error("User couldn't be found by this id.")
-            return Response(status=400, response="User couldn't be found by this id.")
-
+            except peewee.DoesNotExist:
+                log.error("User couldn't be found by this id.")
+                return Response(status=400, response="User couldn't be found by this id.")
+        elif string:
+            try:
+                user = UserDB.get(username=string)
+                log.info("Finished GET /user")
+            except peewee.DoesNotExist:
+                log.error("User couldn't be found by this id.")
+                return Response(status=400, response="User couldn't be found by this id.")
+        else:
+            log.error("Missing arguments.")
+            return Response(status=400, response="Missing arguments.")
 
         is_following = Follow.select(peewee.fn.COUNT(Follow.id)).where(
             (Follow.follower == user_logged_id) & (Follow.followed == user)

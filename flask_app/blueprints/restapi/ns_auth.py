@@ -6,7 +6,7 @@ from flask import Response, Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
-from peewee import DoesNotExist
+from peewee import DoesNotExist, IntegrityError
 
 from ...classes.models import TokenBlocklist, User as UserDB, RECIPES_BACKGROUND_TYPE
 from ...classes.schemas import LoginSchema, RecipeSchema, UserSchema
@@ -92,16 +92,9 @@ class UserAuthResource(Resource):
             data = UserSchema().load(json_data)
         except ValidationError as err:
             log.error(err.messages)
-            return Response(status=400, response=json.dumps(err.messages), mimetype="application/json")
 
-        # search for and existing email
+            return Response(status=400, response=json.dumps({"errors":err.messages}), mimetype="application/json")
 
-        try:
-            UserDB.get(email=data['email'])
-            log.error("An object whit the same email already exist...")
-            return Response(status=409, response="An object whit the same email already exist...")
-        except:
-            pass
 
         # fills db objects
 
@@ -116,7 +109,16 @@ class UserAuthResource(Resource):
             return Response(status=400, response=json.dumps(e), mimetype="application/json")
 
         # commit them
-        user.save()
+        try:
+            user.save()
+        except IntegrityError as e:
+            msg = {}
+            if "username" in e.args[1]:
+                msg["username"]=["Username is already being used."]
+            elif "email" in e.args[1]:
+                msg["email"] = ["Email is already being used."]
+
+            return Response(status=400, response=json.dumps({"errors":msg}), mimetype="application/json")
 
         log.info("Finished POST /auth")
         return Response(status=201)

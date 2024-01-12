@@ -104,6 +104,7 @@ class BaseModel(Model):
 class User(BaseModel):
     # __tablename__ = "user"
     name = CharField(null=False)
+    username = CharField(null=False, unique=True)
     birth_date = DateTimeField(null=False)
     email = CharField(unique=True, null=False)
     password = CharField(null=False)
@@ -316,12 +317,10 @@ class ApplicationReport(BaseModel):
     class Meta:
         db_table = "application_report"
 
+
 class TokenBlocklist(BaseModel):
     jti = CharField()
     created_date = DateTimeField(default=datetime.now())
 
     class Meta:
         db_table = 'token_block_list'
-
-
-
