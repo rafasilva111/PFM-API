@@ -114,6 +114,9 @@ class RecipeListResource(Resource):
                      .join(RecipeTagThroughDB).join(TagDB)
                      .where(TagDB.title.contains(args['searchTag'])))
 
+        # apply default order_by
+        query.order_by(RecipeDB.created_date.asc())
+
         # Check if sorted
 
         if by:
@@ -128,8 +131,9 @@ class RecipeListResource(Resource):
             elif by == RECIPES_SORTING_TYPE.VERIFIED.value:
 
                 query = (query
-                         .where(RecipeDB.verified is True)
-                         .order_by(RecipeDB.created_date))
+                         .where(RecipeDB.verified == True))
+
+
             elif by == RECIPES_SORTING_TYPE.LIKES.value:
 
                 likes_subquery = (RecipeBackground
@@ -447,7 +451,7 @@ class RecipeResource(Resource):
                     for t in tags:
                         tag, created = TagDB.get_or_create(title=t)
                         recipe.tags.add(tag)
-
+                        tag.save()
 
             except Exception as e:
                 log.error("Tags Table has some error...")
@@ -462,7 +466,7 @@ class RecipeResource(Resource):
                 return Response(status=400, response="Nutrition Table has some error.\n" + str(e))
 
             # finally build full object
-            tag.save()
+
             recipe.save()
             log.info("Finished PUT /recipe")
             return Response(status=200, response="Recipe was successfully updated")
