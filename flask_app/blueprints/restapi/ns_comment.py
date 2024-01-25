@@ -54,90 +54,41 @@ class CommentsListResource(Resource):
             log.info("page_size not in [5, 10, 20, 40]")
             return Response(status=400, response="page_size not in [5, 10, 20, 40]")
 
-        # Pesquisa comments from a recipe id
+            # declare response holder
+
+        response_holder = {}
+
+        # build query
+
+        query = CommentDB.select().order_by(CommentDB.updated_date.desc())
 
         if recipe_id:
-
-            # declare response holder
-
-            response_holder = {}
-
             # build query
 
-            query = CommentDB.select().where(CommentDB.recipe == recipe_id).order_by(CommentDB.created_date.desc())
+            query = query.where(CommentDB.recipe == recipe_id)
 
-            # metadata
-
-            total_comments = int(query.count())
-            total_pages = math.ceil(total_comments / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_comments, ENDPOINT)
-            response_holder["_metadata"] = metadata
-
-            # response data
-
-            comments = []
-            for item in query.paginate(page, page_size):
-                comments.append(CommentSchema().dump(item))
-
-            response_holder["result"] = comments
-
-            log.info("Finished GET /comment/list with recipe id")
-            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
-        elif client_id:
-
-            user_id = get_jwt_identity()
-
-            if client_id != user_id:
-                return Response(status=400, response="Invalid arguments...")
-
-            # declare response holder
-
-            response_holder = {}
-
+        if client_id:
             # build query
 
-            query = CommentDB.select().where(CommentDB.user == client_id).order_by(CommentDB.updated_date.desc())
+            query = query.where(CommentDB.user == client_id)
 
-            # metadata
+        # metadata
 
-            total_comments = int(query.count())
-            total_pages = math.ceil(total_comments / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_comments, ENDPOINT)
-            response_holder["_metadata"] = metadata
+        total_comments = int(query.count())
+        total_pages = math.ceil(total_comments / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_comments, ENDPOINT)
+        response_holder["_metadata"] = metadata
 
-            # response data
+        # response data
 
-            comments = []
-            for item in query.paginate(page, page_size):
-                comments.append(CommentSchema().dump(item))
+        comments = []
+        for item in query.paginate(page, page_size):
+            comments.append(CommentSchema().dump(item))
 
-            response_holder["result"] = comments
+        response_holder["result"] = comments
 
-            log.info("Finished GET /comment/list with recipe id")
-            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
-        else:
-
-            # declare response holder
-
-            response_holder = {}
-
-            # metadata
-
-            total_comments = int(CommentDB.select().count())
-            total_pages = math.ceil(total_comments / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_comments, ENDPOINT)
-            response_holder["_metadata"] = metadata
-
-            # response data
-
-            comments = []
-            for item in CommentDB.select().paginate(page, page_size):
-                comments.append(CommentSchema().dump(item))
-
-            response_holder["result"] = comments
-
-            log.info("Finished GET /comment/list")
-            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+        log.info("Finished GET /comment/list")
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 
 @api.route("")
@@ -156,7 +107,6 @@ class CommentResource(Resource):
 
         if not args["id"]:
             return Response(status=400, response="Invalid arguments...")
-
 
         # Get and Serialize db model
 

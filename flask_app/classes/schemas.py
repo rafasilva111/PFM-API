@@ -97,6 +97,7 @@ class RecipeListSchema(ma.Schema):
 
 class UserSimpleSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
+    username = fields.String(required=True)
     name = fields.String(required=True)
     email = fields.Email(required=True)
 
@@ -389,7 +390,7 @@ class CommentSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     text = fields.String(required=True, null=False)
     user = fields.Nested(UserSchema, dump_only=True)
-    recipe = fields.Nested(RecipeReportSchema, dump_only=True)
+    recipe = fields.Nested(RecipeSimpleSchema, dump_only=True)
     created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
     updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
 
