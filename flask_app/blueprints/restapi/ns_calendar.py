@@ -72,15 +72,17 @@ class CalendarResource(Resource):
 
         # query
 
+        query = CalendarEntry.select().where(CalendarEntry.user == get_jwt_identity())
+
         if date:
             next_day = add_days(date, 1)
-            query = CalendarEntry.select().where(
+            query = query.where(
                 (CalendarEntry.realization_date >= date) &
                 (CalendarEntry.realization_date <= next_day)
             )
         elif from_date and to_date:
 
-            query = CalendarEntry.select().where(
+            query = query.where(
                 (CalendarEntry.realization_date >= from_date) &
                 (CalendarEntry.realization_date <= to_date)
             ).order_by(CalendarEntry.realization_date)
@@ -103,14 +105,6 @@ class CalendarResource(Resource):
 
             log.info("Finish GET /calender/list")
             return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
-        elif recipe_id:
-
-            # gets user auth id
-            user_id = get_jwt_identity()
-            query = CalendarEntry.select().where((CalendarEntry.recipe == recipe_id) & (CalendarEntry.user == user_id))
-
-        else:
-            query = CalendarEntry.select()
 
         # metadata
 
