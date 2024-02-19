@@ -25,6 +25,7 @@ services:
                 dockerfile: Dockerfile-Flask
         volumes:
           - ./scripts:/scripts
+          - ./flask_app:/var/www/flask_app
         env_file: .env-prod
         depends_on:
                 - db
