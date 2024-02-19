@@ -333,17 +333,24 @@ class UserSchema(ma.Schema):
 
 
 class UserPatchSchema(ma.Schema):
-    first_name = fields.String(required=False)
-    last_name = fields.String(required=False)
-    password = fields.String(load_only=True)
+    name = fields.String(required=False)
+
+    sex = fields.String(validate=lambda x: x in SEXES)
+    username = fields.String(required=False)
+    password = fields.String(required=False,load_only=False)
+    old_password = fields.String(required=False,load_only=False)
     img_source = fields.String(required=False)
     fmc_token = fields.String(required=False)
     description = fields.String(required=False)
+
+    birth_date = fields.DateTime(format='%d/%m/%Y', required=True)
+    user_portion = fields.Integer(required=False)
+
     activity_level = fields.Float(required=False)
     height = fields.Float(required=False)
-    user_portion = fields.Integer(required=False)
     weight = fields.Float(required=False)
-    age = fields.Integer(dump_only=False, required=False)
+
+
     updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
     # patch by admin
     profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE_SET, required=False)
