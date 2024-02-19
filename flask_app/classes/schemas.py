@@ -3,8 +3,10 @@ import pickle
 import re
 from datetime import timedelta
 
-from marshmallow import fields, validates, pre_dump, pre_load, ValidationError
+from marshmallow import fields, validates, pre_dump, pre_load, ValidationError, EXCLUDE
 
+from flask_app.classes.enums import PROFILE_TYPE_SET, USER_TYPE_SET, RECIPES_BACKGROUND_TYPE_SET, \
+    RECIPES_BACKGROUND_TYPE, FOLLOWED_STATE_SET, CALENDER_ENTRY_TAG_SET
 from flask_app.classes.models import *
 from flask_app.ext.schema import ma
 
@@ -230,13 +232,6 @@ class RecipeSimpleSchema(ma.Schema):
 class RecipeBackgroundSchema(ma.Schema):
     class Meta:
         model = RecipeBackground
-        include_fk = True
-        fields = ('__all__',)
-
-
-class TagSchema(ma.Schema):
-    class Meta:
-        model = Tag
         include_fk = True
         fields = ('__all__',)
 
@@ -539,6 +534,37 @@ class ShoppingListSchema(ma.Schema):
 class UserToFollow(ma.Schema):
     request_sent = fields.Boolean(default=False)
     user = fields.Nested(UserSimpleSchema, required=True)
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
+''' Fitness Schemas '''
+
+class GenericReport(ma.Schema):
+    titles = fields.List(fields.String(required=False, allow_none=True))
+    data = fields.List(fields.List(fields.String(required=False, allow_none=True)))
+    disclaimer = fields.String(default=False, allow_none=True)
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
+class CarboHydrateReportRowSchema(ma.Schema):
+    goal = fields.Float(required=True)
+    daily_calorie_allowance = fields.Float()
+    forty_perc = fields.Integer(required=False)
+    fifty_perc = fields.Integer(required=False)
+    sixty_five_perc = fields.Integer(required=False)
+    seventy_five_perc = fields.Integer(required=False)
+    only_option = fields.Integer(default=-1)
+
+class CarboHydrateReportSchema(GenericReport):
+    titles = fields.List(fields.String(required=True))
+    data = fields.List(fields.Nested(CarboHydrateReportRowSchema,default=[]))
+    disclaimer = fields.String(allow_none=True)
 
     class Meta:
         unknown = EXCLUDE

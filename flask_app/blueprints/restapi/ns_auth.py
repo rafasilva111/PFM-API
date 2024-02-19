@@ -8,31 +8,16 @@ from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
 from peewee import DoesNotExist, IntegrityError
 
-from ...classes.models import TokenBlocklist, User as UserDB, RECIPES_BACKGROUND_TYPE
+from ...classes.enums import RECIPES_BACKGROUND_TYPE
+from ...classes.models import TokenBlocklist, User as UserDB
 from ...classes.schemas import LoginSchema, RecipeSchema, UserSchema
 from ...ext.logger import log
 
-# Create blue print
+# Create name space
 api = Namespace("Auth", description="Here are all auth endpoints")
 
 ENDPOINT = "/auth"
 
-# School API Model
-
-# Validation Schemas
-
-auth_json_schema = {
-    "type": "object",
-    "properties": {
-        "email": {"type": "string",
-                  "minLength": 5},
-        "password": {
-            "type": "string",
-            "minLength": 8
-        },
-    },
-    "required": ["email", "password"]
-}
 
 
 @api.route('/login')

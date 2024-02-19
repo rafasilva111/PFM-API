@@ -7,9 +7,9 @@ from flask import Response
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from flask_restx import Namespace, Resource
 
+from ...classes.enums import USER_TYPE, NOTIFICATION_TYPE, PROFILE_TYPE
 from ...classes.functions import push_notification
-from ...classes.models import TokenBlocklist, Comment as CommentDB, Follow as FollowDB, User as UserDB, PROFILE_TYPE, \
-    FollowRequest as FollowRequestDB, NOTIFICATION_TYPE, USER_TYPE
+from ...classes.models import TokenBlocklist, Comment as CommentDB, Follow as FollowDB, User as UserDB, FollowRequest as FollowRequestDB
 from ...classes.schemas import CommentSchema, build_metadata, UserSimpleSchema, UserToFollow
 from ...ext.logger import log
 

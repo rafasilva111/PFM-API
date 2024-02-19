@@ -1,6 +1,5 @@
 import sys
 
-from .bp_fitness import fitness_blueprint
 from .util.constants import BASE_URL_PREFIX
 
 sys.path.append(".")
@@ -18,6 +17,7 @@ from .ns_notifications import api as api_notifications, ENDPOINT as NOTIFICATION
 from .ns_auth import api as api_auth, ENDPOINT as ENDPOINT_AUTH
 from .ns_admin import api as api_admin_company, ENDPOINT as ENDPOINT_ADMIN
 from .ns_miscellaneous import api as api_miscellaneous, ENDPOINT as ENDPOINT_MISCELLANEOUS
+from .ns_fitness import api as api_fitness, ENDPOINT as ENDPOINT_FITNESS
 
 from .admin.ns_user import api as api_admin_user, ENDPOINT as USER_ADMIN_ENDPOINT
 
@@ -26,7 +26,6 @@ from .admin.ns_user import api as api_admin_user, ENDPOINT as USER_ADMIN_ENDPOIN
 
 bp = Blueprint("restapi", __name__, url_prefix=BASE_URL_PREFIX)
 ADMIN_ENDPOINT = "/admin"
-
 
 # TODO
 description = r"""
@@ -45,14 +44,12 @@ api.add_namespace(api_notifications, path=NOTIFICATIONS_ENDPOINT)
 api.add_namespace(api_auth, path=ENDPOINT_AUTH)
 api.add_namespace(api_admin_company, path=ENDPOINT_ADMIN)
 api.add_namespace(api_miscellaneous, path=ENDPOINT_MISCELLANEOUS)
+api.add_namespace(api_fitness, path=ENDPOINT_FITNESS)
 
 # admin
 
 api.add_namespace(api_admin_user, path=f"{ADMIN_ENDPOINT}{USER_ADMIN_ENDPOINT}")
 
 
-
 def init_app(app):
     app.register_blueprint(bp)
-
-

@@ -4,7 +4,8 @@ from datetime import datetime, timedelta, timezone
 import requests
 from flask_jwt_extended import get_jwt, jwt_required
 
-from .models import UNITS_TYPE, NOTIFICATION_TYPE, TokenBlocklist, Notification
+from .enums import UNITS_TYPE, NOTIFICATION_TYPE
+from .models import TokenBlocklist, Notification
 from ..ext.logger import log
 import re
 

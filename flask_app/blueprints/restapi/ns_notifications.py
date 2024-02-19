@@ -1,18 +1,14 @@
 import json
 import math
-from datetime import datetime, timezone
 
 import peewee
 from flask import Response, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restx import Namespace, Resource
-from marshmallow import ValidationError
 
-from .errors import return_error_sql
 from ...classes.functions import block_user_session_id
-from ...classes.models import User as UserDB, ShoppingList as ShoppingListDB, \
-    ShoppingIngredient as ShoppingIngredientDB, Ingredient as IngredientDB, USER_TYPE, Notification as NotificationDB
-from ...classes.schemas import ShoppingListSchema, build_metadata, ShoppingListPatchSchema, NotificationSchema
+from ...classes.models import User as UserDB, Notification as NotificationDB
+from ...classes.schemas import build_metadata, NotificationSchema
 from ...ext.logger import log
 
 api = Namespace("calendar", description="Here are all comment endpoints")

@@ -9,10 +9,11 @@ from marshmallow import ValidationError
 from flask_app.ext.database import db
 from flask_restx import Resource, Namespace
 
+from ...classes.enums import USER_TYPE, PROFILE_TYPE
 from ...classes.functions import block_user_session_id
 from ...classes.schemas import UserSchema
 
-from ...classes.models import User as UserDB, USER_TYPE, PROFILE_TYPE
+from ...classes.models import User as UserDB
 
 from ...ext.logger import log
 

@@ -1,12 +1,9 @@
-import json
-import math
-from datetime import datetime, timezone
+from datetime import timezone
 
 import peewee
 from flask import Response, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from flask_restx import Namespace, Resource
-from playhouse.shortcuts import model_to_dict
 
 from ..errors import return_error_sql
 from ....classes.models import User as UserDB

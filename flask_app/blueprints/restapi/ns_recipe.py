@@ -32,18 +32,6 @@ parser.add_argument('by', type=str, help='Type of background sort type.')
 ENDPOINT = "/recipe"
 
 
-## Measuring constants
-
-class RECIPES_SORTING_TYPE(Enum):
-    VERIFIED = "VERIFIED"
-    DATE = "DATE"
-    LIKES = "LIKES"
-    SAVES = "SAVES"
-    RANDOM = "RANDOM"
-
-
-RECIPES_SORTING_TYPE_SET = RECIPES_SORTING_TYPE._value2member_map_
-
 
 # Create resources
 @api.route("/list")

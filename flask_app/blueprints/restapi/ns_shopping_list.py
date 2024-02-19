@@ -9,9 +9,10 @@ from flask_restx import Namespace, Resource
 from marshmallow import ValidationError
 
 from .errors import return_error_sql
+from ...classes.enums import USER_TYPE
 from ...classes.functions import block_user_session_id
 from ...classes.models import User as UserDB, ShoppingList as ShoppingListDB, \
-    ShoppingIngredient as ShoppingIngredientDB, Ingredient as IngredientDB, USER_TYPE
+    ShoppingIngredient as ShoppingIngredientDB, Ingredient as IngredientDB
 from ...classes.schemas import ShoppingListSchema, build_metadata, ShoppingListPatchSchema
 from ...ext.logger import log
 
