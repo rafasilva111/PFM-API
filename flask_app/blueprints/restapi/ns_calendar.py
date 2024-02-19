@@ -367,7 +367,8 @@ class CalendarResource(Resource):
                  .select()
                  .join(Recipe)
                  .join(CalendarEntry)
-                 .where((CalendarEntry.realization_date >= from_date) &
+                 .where((CalendarEntry.user == user_logged_id) &
+                        (CalendarEntry.realization_date >= from_date) &
                         (CalendarEntry.realization_date <= to_date)))
 
         total_ingredients = {}
