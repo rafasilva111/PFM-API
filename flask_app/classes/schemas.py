@@ -343,7 +343,7 @@ class UserPatchSchema(ma.Schema):
     fmc_token = fields.String(required=False)
     description = fields.String(required=False)
 
-    birth_date = fields.DateTime(format='%d/%m/%Y', required=True)
+    birth_date = fields.DateTime(format='%d/%m/%Y', required=False)
     user_portion = fields.Integer(required=False)
 
     activity_level = fields.Float(required=False)
