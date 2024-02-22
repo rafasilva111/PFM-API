@@ -84,6 +84,7 @@ class UserAuthResource(Resource):
 
         log.info("POST /auth")
 
+        # body
         json_data = request.get_json()
 
         # Validate args by loading it into schema

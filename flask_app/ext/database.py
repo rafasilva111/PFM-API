@@ -16,7 +16,7 @@ class ReconectMySQLDatabase(ReconnectMixin, MySQLDatabase):
 db = ReconectMySQLDatabase(database=database, user=user, password=password,
                            host=host)
 
-models = [TokenBlocklist, NutritionInformation, Recipe, RecipeBackground, Tag, User, RecipeTagThrough, Comment, Follow,
+models = [TokenBlocklist, NutritionInformation, Recipe,RecipeRating, RecipeBackground, Tag, User, RecipeTagThrough, Comment, Follow,
           Ingredient, RecipeIngredientQuantity, CalendarEntry, FollowRequest, Notification, ShoppingIngredient,
           ShoppingList,RecipeReport,ApplicationReport]
 

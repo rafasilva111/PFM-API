@@ -7,7 +7,7 @@ from marshmallow import EXCLUDE
 from playhouse.shortcuts import ReconnectMixin
 
 from peewee import TextField, FloatField, CharField, DateTimeField, BooleanField, IntegerField, BlobField, \
-    ForeignKeyField, ManyToManyField
+    ForeignKeyField, ManyToManyField, fn, JOIN
 from flask_bcrypt import generate_password_hash, check_password_hash
 from peewee import Model, MySQLDatabase
 
@@ -93,15 +93,23 @@ class PROFILE_TYPE(Enum):
 PROFILE_TYPE_SET = PROFILE_TYPE._value2member_map_
 
 
-class BaseModel(Model):
+class EmptyModel(Model):
     class Meta:
         database = db
+
+
+class BaseModel(EmptyModel):
+    created_date = DateTimeField(default=datetime.now, null=False)
+
+
+class UpdatableBaseModel(BaseModel):
+    updated_date = DateTimeField(default=datetime.now, null=False)
 
 
 ''' User '''
 
 
-class User(BaseModel):
+class User(UpdatableBaseModel):
     # __tablename__ = "user"
     name = CharField(null=False)
     username = CharField(null=False, unique=True)
@@ -127,9 +135,6 @@ class User(BaseModel):
     weight = FloatField(default=-1)
     age = CharField(null=False)
 
-    created_date = DateTimeField(default=datetime.now())
-    updated_date = DateTimeField(default=datetime.now())
-
     def hash_password(self, password):
         return generate_password_hash(password).decode('utf8')
 
@@ -140,7 +145,6 @@ class User(BaseModel):
 class FollowRequest(BaseModel):
     follower = ForeignKeyField(User, backref='followers_request')
     followed = ForeignKeyField(User, backref='followeds_request')
-    created_date = DateTimeField(default=datetime.now())
 
     class Meta:
         db_table = 'follow_request'
@@ -154,7 +158,7 @@ class Follow(BaseModel):
 ''' Recipe '''
 
 
-class NutritionInformation(BaseModel):
+class NutritionInformation(EmptyModel):
     energia = CharField()
     energia_perc = CharField()
     gordura = CharField()
@@ -176,7 +180,7 @@ class NutritionInformation(BaseModel):
         db_table = 'nutrition_information'
 
 
-class Recipe(BaseModel):
+class Recipe(UpdatableBaseModel):
     title = CharField(null=False)
     description = CharField(null=False)
     img_source = CharField(null=True)
@@ -192,12 +196,29 @@ class Recipe(BaseModel):
     created_by = ForeignKeyField(User, backref="created_recipes")
     nutrition_information = ForeignKeyField(NutritionInformation, backref='recipe', null=True, on_delete='CASCADE')
 
-    rating = FloatField(default=0.0)
     source_rating = FloatField(null=True)
     source_link = CharField(null=True)
 
-    created_date = DateTimeField(default=datetime.now(), null=False)
-    updated_date = DateTimeField(default=datetime.now(), null=False)
+    def get_average_rating(self):
+        avg_rating = RecipeRating.select(fn.AVG(RecipeRating.rating)).where(RecipeRating.recipe == self).scalar()
+        return avg_rating or 0.0
+
+
+    def get_likes(self):
+        likes = RecipeBackground.select().where(
+            (RecipeBackground.recipe == self) & (
+                    RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value)).count()
+
+        return likes or 0
+
+
+class RecipeRating(BaseModel):
+    recipe = ForeignKeyField(Recipe, backref="ratings", on_delete="CASCADE")
+    user = ForeignKeyField(User, backref="rated_recipes", on_delete="CASCADE")
+    rating = IntegerField(null=True)
+
+    class Meta:
+        db_table = 'recipe_ratings'
 
 
 class RecipeBackground(BaseModel):
@@ -217,11 +238,11 @@ class Tag(BaseModel):
 RecipeTagThrough = Recipe.tags.get_through_model()
 
 
-class Ingredient(BaseModel):
+class Ingredient(EmptyModel):
     name = CharField(null=False, unique=True)
 
 
-class RecipeIngredientQuantity(BaseModel):
+class RecipeIngredientQuantity(EmptyModel):
     ingredient = ForeignKeyField(Ingredient, backref="ingredient_base")
     recipe = ForeignKeyField(Recipe, backref="ingredients", on_delete="CASCADE", null=False)
     quantity_original = CharField(null=False)
@@ -234,12 +255,10 @@ class RecipeIngredientQuantity(BaseModel):
         db_table = 'recipe_ingredient_quantity'
 
 
-class Comment(BaseModel):
+class Comment(UpdatableBaseModel):
     text = CharField(null=False)
     recipe = ForeignKeyField(Recipe, backref='comments', on_delete="CASCADE")
     user = ForeignKeyField(User, backref='comments')
-    created_date = DateTimeField(default=datetime.now, null=False)
-    updated_date = DateTimeField(default=datetime.now, null=False)
 
 
 class RecipeReport(BaseModel):
@@ -247,7 +266,6 @@ class RecipeReport(BaseModel):
     message = CharField(null=False)
     recipe = ForeignKeyField(Recipe, backref='reports', on_delete="CASCADE")
     user = ForeignKeyField(User, backref='recipe_reports')
-    created_date = DateTimeField(default=datetime.now, null=False)
 
     class Meta:
         db_table = 'recipe_report'
@@ -260,7 +278,6 @@ class CalendarEntry(BaseModel):
     recipe = ForeignKeyField(Recipe, backref='recipe', on_delete="CASCADE")
     user = ForeignKeyField(User, backref='user', on_delete="CASCADE")
     tag = CharField(null=False)  # Pequeno almoço, Lanche da manhã, Almoço, Lanche da tarde ,Jantar , Ceia
-    created_date = DateTimeField(default=datetime.now, null=False)
     realization_date = DateTimeField(null=False)
     checked_done = BooleanField(default=False)
 
@@ -271,11 +288,9 @@ class CalendarEntry(BaseModel):
 """ Shopping List """
 
 
-class ShoppingList(BaseModel):
+class ShoppingList(UpdatableBaseModel):
     name = CharField(null=False)
     user = ForeignKeyField(User, backref='user', on_delete="CASCADE")
-    updated_date = DateTimeField(default=datetime.now, null=False)
-    created_date = DateTimeField(default=datetime.now, null=False)
     archived = BooleanField(default=False)
 
     class Meta:
@@ -302,17 +317,15 @@ class Notification(BaseModel):
     title = CharField(null=False)
     message = CharField(null=False)
     user = ForeignKeyField(User, backref='notifications')
-    created_date = DateTimeField(default=datetime.now, null=False)
     seen = BooleanField(default=False)
     type = IntegerField(default=-1)
 
 
-class ApplicationReport(BaseModel):
+class ApplicationReport(UpdatableBaseModel):
     title = CharField(null=False)
     message = CharField(null=False)
     user = ForeignKeyField(User, backref='aplication_reports')
     archived = BooleanField(default=False)
-    created_date = DateTimeField(default=datetime.now, null=False)
 
     class Meta:
         db_table = "application_report"
@@ -320,7 +333,6 @@ class ApplicationReport(BaseModel):
 
 class TokenBlocklist(BaseModel):
     jti = CharField()
-    created_date = DateTimeField(default=datetime.now())
 
     class Meta:
         db_table = 'token_block_list'

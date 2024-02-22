@@ -4,6 +4,7 @@ import re
 from datetime import timedelta
 
 from marshmallow import fields, validates, pre_dump, pre_load, ValidationError
+from peewee import fn
 
 from flask_app.classes.models import *
 from flask_app.ext.schema import ma
@@ -162,6 +163,7 @@ class RecipeSchema(ma.Schema):
     portion = fields.String(required=False)
     time = fields.String(required=False)
 
+    rating = fields.Integer(default=0, required=False)
     likes = fields.Integer(default=0, required=False)
     views = fields.Integer(default=0, required=False)
     comments = fields.Integer(default=0, required=False)
@@ -172,7 +174,6 @@ class RecipeSchema(ma.Schema):
     tags = fields.Nested(TagSchema, many=True)
     created_by = fields.Nested(UserSimpleSchema, dump_only=True)
 
-    rating = fields.Float(default=0.0)
     source_rating = fields.String(required=False)
     source_link = fields.String(required=False)
     company = fields.String(required=False)
@@ -191,11 +192,10 @@ class RecipeSchema(ma.Schema):
         if data.preparation:
             data.preparation = pickle.loads(data.preparation)
 
-        data.likes = RecipeBackground.select().where(
-            (RecipeBackground.recipe == data.id) & (
-                    RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value)).count()
+        data.likes = data.get_likes()
 
         data.comments = data.comments.count()
+        data.rating = data.get_average_rating()
         return data
 
 
@@ -230,13 +230,6 @@ class RecipeSimpleSchema(ma.Schema):
 class RecipeBackgroundSchema(ma.Schema):
     class Meta:
         model = RecipeBackground
-        include_fk = True
-        fields = ('__all__',)
-
-
-class TagSchema(ma.Schema):
-    class Meta:
-        model = Tag
         include_fk = True
         fields = ('__all__',)
 
@@ -337,8 +330,8 @@ class UserPatchSchema(ma.Schema):
 
     sex = fields.String(validate=lambda x: x in SEXES)
     username = fields.String(required=False)
-    password = fields.String(required=False,load_only=False)
-    old_password = fields.String(required=False,load_only=False)
+    password = fields.String(required=False, load_only=False)
+    old_password = fields.String(required=False, load_only=False)
     img_source = fields.String(required=False)
     fmc_token = fields.String(required=False)
     description = fields.String(required=False)
@@ -349,7 +342,6 @@ class UserPatchSchema(ma.Schema):
     activity_level = fields.Float(required=False)
     height = fields.Float(required=False)
     weight = fields.Float(required=False)
-
 
     updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
     # patch by admin
@@ -544,6 +536,7 @@ class ShoppingListSchema(ma.Schema):
 
 
 class UserToFollow(ma.Schema):
+    follower = fields.Boolean(default=False)
     request_sent = fields.Boolean(default=False)
     user = fields.Nested(UserSimpleSchema, required=True)
 
@@ -590,3 +583,37 @@ class LoginSchema(ma.Schema):
 
     class Meta:
         unknown = EXCLUDE
+
+
+''' Fitness Schemas '''
+
+class GenericReport(ma.Schema):
+    titles = fields.List(fields.String(required=False, allow_none=True))
+    data = fields.List(fields.List(fields.String(required=False, allow_none=True)))
+    disclaimer = fields.String(default=False, allow_none=True)
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
+class CarboHydrateReportRowSchema(ma.Schema):
+    goal = fields.Float(required=True)
+    daily_calorie_allowance = fields.Float()
+    forty_perc = fields.Integer(required=False)
+    fifty_perc = fields.Integer(required=False)
+    sixty_five_perc = fields.Integer(required=False)
+    seventy_five_perc = fields.Integer(required=False)
+    only_option = fields.Integer(default=-1)
+
+class CarboHydrateReportSchema(GenericReport):
+    titles = fields.List(fields.String(required=True))
+    data = fields.List(fields.Nested(CarboHydrateReportRowSchema,default=[]))
+    disclaimer = fields.String(allow_none=True)
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
+

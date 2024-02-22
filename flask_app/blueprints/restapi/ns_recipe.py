@@ -40,6 +40,7 @@ class RECIPES_SORTING_TYPE(Enum):
     LIKES = "LIKES"
     SAVES = "SAVES"
     RANDOM = "RANDOM"
+    CLASSIFICATION = "CLASSIFICATION"
 
 
 RECIPES_SORTING_TYPE_SET = RECIPES_SORTING_TYPE._value2member_map_
@@ -100,6 +101,7 @@ class RecipeListResource(Resource):
                      .join(Comment)
                      .join(User)
                      .where(Comment.user == args['commented_by']))
+
         else:
             # pesquisa normal
             query = RecipeDB.select()
@@ -133,7 +135,6 @@ class RecipeListResource(Resource):
                 query = (query
                          .where(RecipeDB.verified == True))
 
-
             elif by == RECIPES_SORTING_TYPE.LIKES.value:
 
                 likes_subquery = (RecipeBackground
@@ -145,6 +146,7 @@ class RecipeListResource(Resource):
                 query = (query
                          .select(RecipeDB, likes_subquery)
                          .order_by(peewee.SQL('likes').desc()))
+
             elif by == RECIPES_SORTING_TYPE.SAVES.value:
 
                 likes_subquery = (RecipeBackground
@@ -157,6 +159,11 @@ class RecipeListResource(Resource):
                          .select(RecipeDB, likes_subquery)
                          .order_by(peewee.SQL('saves').desc()))
 
+            elif by == RECIPES_SORTING_TYPE.CLASSIFICATION.value:
+                query = query.select(Recipe, fn.AVG(RecipeRating.rating).alias('avg_rating')) \
+                    .join(RecipeRating, JOIN.LEFT_OUTER, on=(Recipe.id == RecipeRating.recipe)) \
+                    .group_by(Recipe.id) \
+                    .order_by(fn.AVG(RecipeRating.rating).desc())
         # metadata
 
         total_recipes = int(query.count())
@@ -560,6 +567,98 @@ class RecipeListBackgroundSortResource(Resource):
 """
 
 
+@api.route("/rating")
+class RecipeRatingResource(Resource):
+
+    @jwt_required()
+    def post(self):
+        """ Post a classification by an user on a recipe """
+
+        # logging
+        log.info("POST /rating")
+
+        # gets user auth id
+        user_id = get_jwt_identity()
+
+        # Get args
+        args = parser.parse_args()
+
+        # Get body
+        body = request.get_json()
+
+        # Validate args
+        if "id" not in args and not args["id"]:
+            log.error("Missing arguments...")
+            return Response(status=400, response="Missing arguments ...")
+
+        # Validate body
+        if "rate" not in body and not body["rate"]:
+            log.error("Missing arguments...")
+            return Response(status=400, response="Missing arguments ...")
+
+        if 5 <= body["rate"] <= 0:
+            log.error(f"Rate must be between 5 and 0 ... (f{body['rate']})")
+            return Response(status=400, response="Rate must be between 5 and 0 ...")
+        # Verify existence of the requested ids model's
+        try:
+            recipe_to_be_rated = RecipeDB.get(args['id'])
+        except peewee.DoesNotExist:
+            log.error("Recipe to be liked, couln't be found.")
+            return Response(status=400, response="Recipe to be liked, couln't be found.")
+
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+            # Otherwise block user token (user cant be logged in and stil reach this far)
+            # this only occurs when accounts are not in db
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            log.error("User couln't be found.")
+            return Response(status=400, response="User couln't be found.")
+
+        recipe_rating, created = RecipeRating \
+            .get_or_create(user=user, recipe=recipe_to_be_rated)
+
+        recipe_rating.rating = body["rate"]
+
+        recipe_rating.save()
+
+        log.info("Finished POST /like")
+        return Response(status=201)
+
+    @jwt_required()
+    def delete(self):
+
+        """Delete rating ( by recipe id)"""
+
+        # logging
+        log.info("DELETE /like")
+
+        # gets user auth id
+        user_id = get_jwt_identity()
+
+        # Get args
+        args = parser.parse_args()
+
+        # Validate args
+        if "id" not in args and not args["id"]:
+            log.error("Missing arguments...")
+            return Response(status=400, response="Missing arguments...")
+
+        # query
+        query = RecipeRating.delete() \
+            .where((RecipeRating.user == user_id) & (RecipeRating.recipe == args["id"])).execute()
+
+        if query != 1:
+            log.error("User did not rate this recipe.")
+            return Response(status=400, response="User did not rate this recipe.")
+
+        log.info("Finished DELETE /like")
+        return Response(status=204)
+
+
 @api.route("/like")
 class RecipeLikeResource(Resource):
     @jwt_required()
@@ -630,22 +729,6 @@ class RecipeLikeResource(Resource):
 
     @jwt_required()
     def delete(self):
-        """Delete like ( by background id ) """
-
-        # todo isto temos de criar uma var (args['recipe_background']) (median)
-
-        # gets user auth id
-
-        user_id = get_jwt_identity()
-
-        # Get args
-
-        args = parser.parse_args()
-
-        like_to_be_deleted_id = args['id']
-
-    @jwt_required()
-    def delete(self):
         """Delete like ( by recipe id, etc)"""
 
         # logging
@@ -663,7 +746,7 @@ class RecipeLikeResource(Resource):
 
         # Validate args
 
-        if not args["id"]:
+        if "id" not in args and not args["id"]:
             log.error("Missing arguments...")
             return Response(status=400, response="Missing arguments...")
 
@@ -974,7 +1057,6 @@ class RecipeCreatesResource(Resource):
         response_holder = {}
 
         # query
-        RecipeDB.select(RecipeDB).distinct().join(RecipeTagThroughDB).join(TagDB)
 
         query = RecipeDB.select(RecipeDB).distinct().where(RecipeDB.created_by == user_id)
 
@@ -992,6 +1074,119 @@ class RecipeCreatesResource(Resource):
             recipes.append(RecipeSchema().dump(item))
 
         response_holder["result"] = recipes
+
+        log.info("Finished GET /creates")
+        return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
+
+
+# Perfil de um user em relação as suas receitas
+@api.route("/profile")
+class RecipeCreatesResource(Resource):
+
+    @jwt_required()
+    def get(self):
+        """List creates by user"""
+
+        # logging
+        log.info("GET /creates")
+
+        # Get args
+
+        args = parser.parse_args()
+
+        # validate args
+
+        page = int(args['page']) if args['page'] else 1
+        page_size = int(args['page_size']) if args['page_size'] else 5
+        user_id = args['id'] if args['id'] else None
+
+        if page <= 0:
+            log.error("page cant be negative")
+            return Response(status=400, response="page cant be negative")
+
+        try:
+            user = UserDB.get(user_id)
+        except peewee.DoesNotExist:
+
+            # Otherwise block user token (user cant be logged in and stil reach this far)
+            # should not reach prod (seria muito mau sinal se for preciso)
+            jti = get_jwt()["jti"]
+            now = datetime.now(timezone.utc)
+            token_block_record = TokenBlocklist(jti=jti, created_at=now)
+            token_block_record.save()
+            log.error("User does not exist...")
+            return Response(status=400, response="Client couln't be found by this id.")
+
+        # declare response holder
+
+        response_holder = {}
+
+        base_query = RecipeDB.select(RecipeDB).where(RecipeDB.created_by == user)
+
+        """ Most Recent """
+
+        # query
+        query_recent = base_query.order_by(RecipeDB.created_date)
+
+        # metadata
+        response_holder["RECENT"] = {}
+
+        total_recipes = int(query_recent.count())
+        total_pages = math.ceil(total_recipes / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
+        response_holder["RECENT"]["_metadata"] = metadata
+
+        # response holder
+        response_holder["RECENT"]["items"] = []
+        for item in query_recent.paginate(page, page_size):
+            response_holder["RECENT"]["items"].append(RecipeSchema().dump(item))
+
+        """ Most Liked"""
+
+        # query
+        likes_subquery = (RecipeBackground
+                          .select(peewee.fn.COUNT(RecipeBackground.id))
+                          .where((RecipeBackground.recipe == RecipeDB.id) &
+                                 (RecipeBackground.type == RECIPES_BACKGROUND_TYPE.LIKED.value))
+                          .alias('likes'))
+
+        query_liked = (base_query
+                       .select(RecipeDB, likes_subquery)
+                       .order_by(peewee.SQL('likes').desc()))
+
+        # metadata
+        response_holder["LIKED"] = {}
+
+        total_recipes = int(query_liked.count())
+        total_pages = math.ceil(total_recipes / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
+        response_holder["LIKED"]["_metadata"] = metadata
+
+        # response holder
+        response_holder["LIKED"]["items"] = []
+        for item in query_liked.paginate(page, page_size):
+            response_holder["LIKED"]["items"].append(RecipeSchema().dump(item))
+
+        """ Most Rated """
+
+        # query
+        query_rated = (base_query.select(Recipe, fn.AVG(RecipeRating.rating).alias('avg_rating'))
+                       .join(RecipeRating, JOIN.LEFT_OUTER, on=(Recipe.id == RecipeRating.recipe))
+                       .group_by(Recipe.id)
+                       .order_by(fn.AVG(RecipeRating.rating).desc()))
+
+        # metadata
+        response_holder["RATED"] = {}
+
+        total_recipes = int(query_rated.count())
+        total_pages = math.ceil(total_recipes / page_size)
+        metadata = build_metadata(page, page_size, total_pages, total_recipes, ENDPOINT)
+        response_holder["RATED"]["_metadata"] = metadata
+
+        # response holder
+        response_holder["RATED"]["items"] = []
+        for item in query_rated.paginate(page, page_size):
+            response_holder["RATED"]["items"].append(RecipeSchema().dump(item))
 
         log.info("Finished GET /creates")
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")

@@ -25,7 +25,7 @@ parser.add_argument('id', type=int, help='The id to be search.')
 parser.add_argument('searchString', type=str, help='The id to be search.')
 parser.add_argument('user_id', type=int, help='The user id to be search.')
 parser.add_argument('user_follower_id', type=int, help='The user id to be search.')
-parser.add_argument('user_follow_id', type=int, help='The user id to be search.')
+parser.add_argument('user_followed_id', type=int, help='The user id to be search.')
 parser.add_argument('follow_request_id', type=int, help='The user id to be search.')
 
 ENDPOINT = "/follow"
@@ -62,9 +62,7 @@ class FollowsListResource(Resource):
 
         # query
 
-        query = UserDB.select().where(((UserDB.user_type != USER_TYPE.ADMIN.value) & (UserDB.id != user_logged_id))
-                                      & UserDB.id.not_in(
-            FollowDB.select(FollowDB.followed).where(FollowDB.follower == user_logged_id)))
+        query = UserDB.select().where(((UserDB.user_type != USER_TYPE.ADMIN.value) & (UserDB.id != user_logged_id)))
 
         if args['searchString'] and args['searchString'] != "":
             query = (query
@@ -74,7 +72,13 @@ class FollowsListResource(Resource):
         query_helper = FollowRequestDB.select(FollowRequestDB.followed).where(
             FollowRequestDB.follower == user_logged_id)
 
-        existing_ids = [item.followed.id for item in query_helper]
+        follow_requests_ids = [item.followed.id for item in query_helper]
+
+        # query for follows
+        query_helper = FollowDB.select().where(
+            FollowDB.followed == user_logged_id)
+
+        follows_ids = [item.follower.id for item in query_helper]
 
         # declare response holder
 
@@ -92,93 +96,14 @@ class FollowsListResource(Resource):
         response_holder["result"] = []
 
         for item in query.paginate(page, page_size):
-            if item.id in existing_ids:
-                response_holder["result"].append(UserToFollow().dump({"user": item, "request_sent": True}))
-            else:
-                response_holder["result"].append(UserToFollow().dump({"user": item, "request_sent": False}))
+            request_sent = item.id in follow_requests_ids
+            follower = item.id in follows_ids
+
+            response_holder["result"].append(
+                UserToFollow().dump({"user": item, "request_sent": request_sent, "follower": follower}))
 
         log.info("Finish GET /find")
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
-
-
-# Create resources
-@api.route("/list")
-class FollowsListResource(Resource):
-
-    def get(self):
-        """List all comments"""
-
-        log.info("GET /follow/list")
-
-        # Get args
-
-        args = parser.parse_args()
-
-        recipe_id = args['recipe_id']
-        page = int(args['page']) if args['page'] else 1
-        page_size = int(args['page_size']) if args['page_size'] else 5
-
-        # validate args
-
-        if page <= 0:
-            log.error("page cant be negative")
-            return Response(status=400, response="page cant be negative")
-        if page_size not in [5, 10, 20, 40]:
-            log.error("page_size not in [5, 10, 20, 40]")
-            return Response(status=400, response="page_size not in [5, 10, 20, 40]")
-
-        ## Pesquisa comments from a recipe id
-
-        if recipe_id:
-
-            # declare response holder
-
-            response_holder = {}
-
-            # build query
-
-            query = CommentDB.select().where(CommentDB.recipe == recipe_id)
-
-            # metadata
-
-            total_comments = int(query.count())
-            total_pages = math.ceil(total_comments / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_comments, ENDPOINT)
-            response_holder["_metadata"] = metadata
-
-            # response data
-
-            comments = []
-            for item in query.paginate(page, page_size):
-                comments.append(CommentSchema().dump(item))
-
-            response_holder["result"] = comments
-
-            log.info("Finish GET /follow/list with recipe id")
-            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
-        else:
-
-            # declare response holder
-
-            response_holder = {}
-
-            # metadata
-
-            total_comments = int(CommentDB.select().count())
-            total_pages = math.ceil(total_comments / page_size)
-            metadata = build_metadata(page, page_size, total_pages, total_comments, ENDPOINT)
-            response_holder["_metadata"] = metadata
-
-            # response data
-
-            comments = []
-            for item in CommentDB.select().paginate(page, page_size):
-                comments.append(CommentSchema().dump(item))
-
-            response_holder["result"] = comments
-
-            log.info("Finish GET /follow/list")
-            return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 
 # Create resources
@@ -244,7 +169,7 @@ class FollowersResource(Resource):
 
     @jwt_required()
     def get(self):
-        """List all followeds"""
+        """List all followedss"""
         # gets user auth id
 
         user_id = get_jwt_identity()
@@ -291,7 +216,6 @@ class FollowersResource(Resource):
 
         response_holder["result"] = followers
 
-        log.info("Finish GET /follow/list/followeds")
         return Response(status=200, response=json.dumps(response_holder), mimetype="application/json")
 
 
@@ -416,7 +340,7 @@ class FollowResource(Resource):
         args = parser.parse_args()
 
         user_follower_id = args['user_follower_id'] if args['user_follower_id'] else None
-        user_followed_id = args['user_follow_id'] if args['user_follow_id'] else None
+        user_followed_id = args['user_followed_id'] if args['user_followed_id'] else None
 
         # Validate args
 
@@ -515,7 +439,7 @@ class FollowAcceptResource(Resource):
         args = parser.parse_args()
 
         user_follower_id = args['user_follower_id'] if args['user_follower_id'] else None
-        user_followed_id = args['user_follow_id'] if args['user_follow_id'] else None
+        user_followed_id = args['user_followed_id'] if args['user_followed_id'] else None
 
         # Validate args
 
@@ -523,7 +447,9 @@ class FollowAcceptResource(Resource):
             log.error("Invalid arguments...")
             return Response(status=400, response="Invalid arguments...")
 
-        # delete follower
+        # delete pedido para seguir
+
+        # delete pedido para ser seguido
         if user_follower_id:
             try:
                 follow = FollowRequestDB.get(
@@ -531,9 +457,6 @@ class FollowAcceptResource(Resource):
             except peewee.DoesNotExist:
                 log.error("User does not follow referenced account.")
                 return Response(status=400, response="User does not follow referenced account.")
-
-
-        # delete followed
         else:
             try:
                 follow = FollowRequestDB.get(
