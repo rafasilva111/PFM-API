@@ -1,3 +1,4 @@
+import json
 import math
 from datetime import timezone
 
@@ -626,7 +627,7 @@ class RecipeRatingResource(Resource):
         recipe_rating.save()
 
         log.info("Finished POST /like")
-        return Response(status=201)
+        return Response(status=201,response=json.dumps(RecipeSchema().dump(recipe_to_be_rated)))
 
     @jwt_required()
     def delete(self):
