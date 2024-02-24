@@ -226,7 +226,7 @@ class UserResource(Resource):
             log.error("User couldn't be found by this id.")
             return Response(status=400, response="User couldn't be found by this id.")
 
-        # get data from json
+        # body
         data = request.get_json()
 
         # validate data through user schema
@@ -238,6 +238,10 @@ class UserResource(Resource):
 
         try:
             for key, value in user_validated.items():
+                if key == "password":
+                    authorized = user_making_patch.check_password(user_validated['old_password'])
+                    if not authorized:
+                        return Response(status=400, response=json.dumps({'error': "Old password is incorrect."}), mimetype="application/json")
                 setattr(user_making_patch, key, value)
 
             user_making_patch.updated_date = datetime.now(timezone.utc)

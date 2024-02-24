@@ -232,3 +232,4 @@ def block_user_session_id():
     now = datetime.now(timezone.utc)
     token_block_record = TokenBlocklist(jti=jti, created_at=now)
     token_block_record.save()
+

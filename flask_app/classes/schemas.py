@@ -587,10 +587,11 @@ class LoginSchema(ma.Schema):
 
 ''' Fitness Schemas '''
 
+
 class GenericReport(ma.Schema):
     titles = fields.List(fields.String(required=False, allow_none=True))
     data = fields.List(fields.List(fields.String(required=False, allow_none=True)))
-    disclaimer = fields.String(default=False, allow_none=True)
+    disclaimer = fields.String(default=None, allow_none=True)
 
     class Meta:
         unknown = EXCLUDE
@@ -599,21 +600,34 @@ class GenericReport(ma.Schema):
 
 class CarboHydrateReportRowSchema(ma.Schema):
     goal = fields.Float(required=True)
-    daily_calorie_allowance = fields.Float()
+    daily_calorie_allowance = fields.Float(required=True)
     forty_perc = fields.Integer(required=False)
     fifty_perc = fields.Integer(required=False)
     sixty_five_perc = fields.Integer(required=False)
     seventy_five_perc = fields.Integer(required=False)
     only_option = fields.Integer(default=-1)
 
+
 class CarboHydrateReportSchema(GenericReport):
-    titles = fields.List(fields.String(required=True))
-    data = fields.List(fields.Nested(CarboHydrateReportRowSchema,default=[]))
-    disclaimer = fields.String(allow_none=True)
+    data = fields.List(fields.Nested(CarboHydrateReportRowSchema, default=[]))
 
     class Meta:
         unknown = EXCLUDE
         ordered = True
 
 
+class LimitsSchema(GenericReport):
+    upper_limit = fields.Float(required=True)
+    lower_limit = fields.Float(required=True)
 
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
+class ProteinReportSchema(GenericReport):
+    data = fields.Nested(LimitsSchema, default=[])
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True

@@ -15,7 +15,8 @@ from typing import List, Tuple
 
 from ...classes.enums import USER_SEXES_TYPE
 from ...classes.models import User as UserDB, TokenBlocklist
-from ...classes.schemas import GenericReport, CarboHydrateReportSchema, CarboHydrateReportRowSchema
+from ...classes.schemas import GenericReport, CarboHydrateReportSchema, CarboHydrateReportRowSchema, \
+    ProteinReportSchema, LimitsSchema
 from ...ext.logger import log
 
 ACTIVIDADE = {
@@ -76,7 +77,6 @@ def get_peso(altura, idade, genero):
             log.error(f"[{get_peso.__name__}] : None matches were found. (string : {result.text})")
             return -1, []
 
-        matches = list(matches[0])
 
 
     else:
@@ -100,9 +100,10 @@ def get_peso(altura, idade, genero):
             log.error(f"[{get_peso.__name__}] : None matches were found. (string : {result_string})")
             return -1, []
 
-        matches = list(matches[0])
-
-    return 1, matches
+    return LimitsSchema().load({
+        "upper_limit": matches[0][1],
+        "lower_limit": matches[0][0]
+    })
 
 
 def get_calories_fat(altura, idade, genero, peso, atividade):
@@ -193,10 +194,8 @@ def get_carbohydrates(altura, idade, genero, peso, atividade):
         paragraphs = html.find_all('p', limit=6)[1:]
         titles = ['Goal', 'Daily Calorie Allowance', '40%*', '55%*', '65%*', '75%*']
         table_array = []
-        first_time = True
 
         for row in paragraphs:
-            helper = []
 
             string = row.text
 
@@ -221,28 +220,36 @@ def get_carbohydrates(altura, idade, genero, peso, atividade):
             values_array = re.findall(r'-?\b\d{1,3}(?:,\d{3})*(?:\.\d+)?\b', string)
 
             if len(values_array) == 3:
-                helper.append({
+                table_array.append({
                     "goal": goal,
                     "daily_calorie_allowance": values_array[0],
                     "only_option": values_array[2],
                 })
             elif len(values_array) == 8:
-                helper.append({
+                table_array.append({
                     "goal": goal,
-                    "daily_calorie_allowance": values_array[0],
+                    "daily_calorie_allowance": float(values_array[0].replace(',', '')),
                     "forty_perc": values_array[1],
                     "fifty_perc": values_array[2],
                     "sixty_five_perc": values_array[5],
                     "seventy_five_perc": values_array[7],
                 })
-            else:
-                print()
 
-    return GenericReport().load({"titles": titles, "data": table_array})
+            elif len(values_array) == 10:
+                table_array.append({
+                    "goal": goal,
+                    "daily_calorie_allowance": float(values_array[0].replace(',', '')),
+                    "forty_perc": values_array[2],
+                    "fifty_perc": values_array[4],
+                    "sixty_five_perc": values_array[7],
+                    "seventy_five_perc": values_array[9],
+                })
+
+    return CarboHydrateReportSchema().load({"titles": titles, "data": table_array})
 
 
 def get_protein(altura, idade, genero, peso, atividade):
-    url = f"https://www.calculator.net/protein-calculator.html?ctype=metric&&cage={idade}&csex={genero}&cheightfeet=5&cheightinch=10&cpound=165&cheightmeter={altura}&ckg={peso}&cactivity={ACTIVIDADE[atividade][1]}&cmop=0&cformula=m&cfatpct=20&printit=0&x=66&y=11"
+    url = f"https://www.calculator.net/protein-calculator.html?ctype=metric&&cage={idade}&csex={genero}&cheightfeet=5&cheightinch=10&cpound=165&cheightmeter={altura}&ckg={peso}&cactivity={atividade}&cmop=0&cformula=m&cfatpct=20&printit=0&x=66&y=11"
     base_response = requests.get(url)
     html = BeautifulSoup(base_response.content, 'html.parser')
 
@@ -256,7 +263,14 @@ def get_protein(altura, idade, genero, peso, atividade):
     response.update({"data": data})
     response.update({"disclaimer": "Opiniao baseada no The Centers for Disease Control and Prevention"})
 
-    return response
+    return ProteinReportSchema().load({
+        "titles": ["Proteina diaria"],
+        "data":
+            {"upper_limit": data[0],
+             "lower_limit": data[1]},
+        "disclaimer": "Opiniao baseada no The Centers for Disease Control and Prevention"
+
+    })
 
 
 """ Endpoints """
@@ -277,8 +291,8 @@ class Weight(Resource):
 
 
 # /gordura?altura=180&idade=20&peso=80&genero=m&atividade=extra_ativo
-@api.route('/fat', methods=['GET'])
-class Fat(Resource):
+@api.route('/calories', methods=['GET'])
+class Calories(Resource):
 
     @jwt_required()
     def get(self):
@@ -371,6 +385,6 @@ class FullModel(Resource):
             full_model_response.update({"data_proteina": get_protein(height, age, gender,
                                                                      weight, activity_level)})
 
-            return Response(status=200, response=json.dumps(full_model_response))
+            return Response(status=200, response=json.dumps(full_model_response), mimetype="application/json")
 
         return Response(status=400)
