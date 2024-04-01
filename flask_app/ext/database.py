@@ -18,7 +18,7 @@ db = ReconectMySQLDatabase(database=database, user=user, password=password,
 
 models = [TokenBlocklist, NutritionInformation, Recipe,RecipeRating, RecipeBackground, Tag, User, RecipeTagThrough, Comment, Follow,
           Ingredient, RecipeIngredientQuantity, CalendarEntry, FollowRequest, Notification, ShoppingIngredient,
-          ShoppingList,RecipeReport,ApplicationReport]
+          ShoppingList,RecipeReport,ApplicationReport,Goal]
 
 
 class Database(object):

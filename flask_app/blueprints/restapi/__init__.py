@@ -17,7 +17,7 @@ from .ns_notifications import api as api_notifications, ENDPOINT as NOTIFICATION
 from .ns_auth import api as api_auth, ENDPOINT as ENDPOINT_AUTH
 from .ns_admin import api as api_admin_company, ENDPOINT as ENDPOINT_ADMIN
 from .ns_miscellaneous import api as api_miscellaneous, ENDPOINT as ENDPOINT_MISCELLANEOUS
-from .ns_fitness import api as api_fitness, ENDPOINT as ENDPOINT_FITNESS
+from .ns_goals import api as api_fitness, ENDPOINT as ENDPOINT_FITNESS
 
 from .admin.ns_user import api as api_admin_user, ENDPOINT as USER_ADMIN_ENDPOINT
 

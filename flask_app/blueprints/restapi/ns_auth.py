@@ -92,8 +92,6 @@ class UserAuthResource(Resource):
         try:
             data = UserSchema().load(json_data)
         except ValidationError as err:
-            log.error(err.messages)
-
             return Response(status=400, response=json.dumps({"errors":err.messages}), mimetype="application/json")
 
 
@@ -169,14 +167,14 @@ class UserAuthResource(Resource):
     @staticmethod
     @jwt_required()
     def get():
-        # gets user auth id
 
         log.info("GET /auth")
-        user_id = get_jwt_identity()
 
-        # query
+
+        # Get auth User
+
         try:
-            user_record = UserDB.get(user_id)
+            user_record = UserDB.get(get_jwt_identity())
         except DoesNotExist as e:
             # Otherwise block user token (user cant be logged in and stil reach this far)
             # this only occurs when accounts are not in db

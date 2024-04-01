@@ -3,13 +3,15 @@ import pickle
 import re
 from datetime import timedelta
 
-from marshmallow import fields, validates, pre_dump, pre_load, ValidationError
+from marshmallow import fields, validates, pre_dump, pre_load, ValidationError, validate
 from peewee import fn
 
+from flask_app.classes.constants import USER_MIN_WEIGHT, USER_MAX_WEIGHT, USER_MIN_HEIGHT, USER_MAX_HEIGHT, \
+    STRING_USER_BIRTHDATE_YOUNG_ERROR, STRING_USER_BIRTHDATE_PAST_ERROR
 from flask_app.classes.models import *
 from flask_app.ext.schema import ma
 
-SEXES = {"M", "F", "NA"}
+SEXES = {"M", "F"}
 
 # Schemas
 
@@ -249,6 +251,20 @@ class RecipeReportSchema(ma.Schema):
         ordered = True
 
 
+''' Goals '''
+
+
+class GoalSchema(ma.Schema):
+    goal = fields.Float(required=True)
+    calories = fields.Float(required=True)
+    fat_upper_limit = fields.Float(required=True)
+    fat_lower_limit = fields.Float(required=True)
+    saturated_fat = fields.Float(required=True)
+    carbohydrates = fields.Float(required=True)
+    proteins_upper_limit = fields.Float(required=True)
+    proteins_lower_limit = fields.Float(required=True)
+
+
 ''' User '''
 
 
@@ -273,15 +289,19 @@ class UserSchema(ma.Schema):
 
     user_portion = fields.Integer(default=-1)
 
-    profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE_SET)
+    profile_type = fields.String(validate=validate.OneOf(PROFILE_TYPE_SET))
     verified = fields.Boolean()
-    user_type = fields.String(validate=lambda x: x in USER_TYPE_SET)
+    user_type = fields.String(validate=validate.OneOf(USER_TYPE_SET))
     img_source = fields.String(default="")
-    activity_level = fields.Float(default=-1)
-    height = fields.Float(default=-1)
-    sex = fields.String(validate=lambda x: x in SEXES)
+
     weight = fields.Float(default=-1)
+    height = fields.Float(default=-1)
     age = fields.Integer(dump_only=True, default=0)
+    sex = fields.String(validate=validate.OneOf(SEXES), default=None)
+
+    activity_level = fields.Float(default=-1)
+
+    fitness_goal = fields.Nested(GoalSchema, dump_only=True)
 
     created_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
     updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
@@ -289,28 +309,41 @@ class UserSchema(ma.Schema):
     class Meta:
         ordered = True
 
-    email_regex = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-
     @validates('birth_date')
     def validate_birth_date(self, value):
-        age = (datetime.now() - value) // timedelta(days=365.25)
-        if not age >= 12:
-            raise ValidationError('You must be at least 12 years old')
+        if not value:
+            return value
 
-    @validates('height')
-    def validate_height(self, value):
-        if not (300 > value > 100):
-            raise ValidationError('You must be between 100 cm and 300 cm')
+        if value > datetime.now():
+            raise ValidationError(STRING_USER_BIRTHDATE_PAST_ERROR)
 
-    @validates('weight')
+        if not (datetime.now() - value) // timedelta(days=365.25) >= 12:
+            raise ValidationError(STRING_USER_BIRTHDATE_YOUNG_ERROR)
+
+    @validates("weight")
     def validate_weight(self, value):
-        if not (200 > value > 30):
-            raise ValidationError('You must be between 30 kg and 200 kg')
+        if value and not USER_MAX_WEIGHT >= value >= USER_MIN_WEIGHT:
+            raise ValidationError(f"User weight must be between {USER_MIN_WEIGHT} kg and {USER_MAX_WEIGHT} kg.")
+        return value
+
+    @validates("height")
+    def validate_height(self, value):
+        if value and not USER_MAX_HEIGHT >= value >= USER_MIN_HEIGHT:
+            raise ValidationError(f"User height must be between {USER_MIN_HEIGHT} cm and {USER_MAX_HEIGHT} cm.")
+        return value
 
     @pre_load
     def hash_password(self, data, **kwargs):
         if 'password' in data:
             data['password'] = generate_password_hash(data['password'])
+        return data
+
+    @pre_dump()
+    def goal(self, data, **kwargs):
+
+        data.fitness_goal = data.goals.order_by(Goal.id.desc()).first()
+
+
         return data
 
     @pre_dump()
@@ -325,10 +358,9 @@ class UserSchema(ma.Schema):
         return data
 
 
-class UserPatchSchema(ma.Schema):
+class UserPatchSchema(UserSchema):
     name = fields.String(required=False)
-
-    sex = fields.String(validate=lambda x: x in SEXES)
+    email = fields.Email(required=False)
     username = fields.String(required=False)
     password = fields.String(required=False, load_only=False)
     old_password = fields.String(required=False, load_only=False)
@@ -345,15 +377,9 @@ class UserPatchSchema(ma.Schema):
 
     updated_date = fields.DateTime(dump_only=True, format='%d/%m/%YT%H:%M:%S')
     # patch by admin
-    profile_type = fields.String(validate=lambda x: x in PROFILE_TYPE_SET, required=False)
+    profile_type = fields.String(validate=validate.OneOf(choices=PROFILE_TYPE_SET), required=False)
     verified = fields.Boolean(required=False)
-    user_type = fields.String(validate=lambda x: x in USER_TYPE_SET, required=False)
-
-    @pre_load
-    def hash_password(self, data, **kwargs):
-        if 'password' in data:
-            data['password'] = generate_password_hash(data['password'])
-        return data
+    user_type = fields.String(validate=validate.OneOf(choices=USER_TYPE_SET), required=False)
 
 
 class UserPerfilSchema(ma.Schema):
@@ -588,35 +614,7 @@ class LoginSchema(ma.Schema):
 ''' Fitness Schemas '''
 
 
-class GenericReport(ma.Schema):
-    titles = fields.List(fields.String(required=False, allow_none=True))
-    data = fields.List(fields.List(fields.String(required=False, allow_none=True)))
-    disclaimer = fields.String(default=None, allow_none=True)
-
-    class Meta:
-        unknown = EXCLUDE
-        ordered = True
-
-
-class CarboHydrateReportRowSchema(ma.Schema):
-    goal = fields.Float(required=True)
-    daily_calorie_allowance = fields.Float(required=True)
-    forty_perc = fields.Integer(required=False)
-    fifty_perc = fields.Integer(required=False)
-    sixty_five_perc = fields.Integer(required=False)
-    seventy_five_perc = fields.Integer(required=False)
-    only_option = fields.Integer(default=-1)
-
-
-class CarboHydrateReportSchema(GenericReport):
-    data = fields.List(fields.Nested(CarboHydrateReportRowSchema, default=[]))
-
-    class Meta:
-        unknown = EXCLUDE
-        ordered = True
-
-
-class LimitsSchema(GenericReport):
+class LimitsSchema(ma.Schema):
     upper_limit = fields.Float(required=True)
     lower_limit = fields.Float(required=True)
 
@@ -625,8 +623,42 @@ class LimitsSchema(GenericReport):
         ordered = True
 
 
-class ProteinReportSchema(GenericReport):
-    data = fields.Nested(LimitsSchema, default=[])
+class FatReport(ma.Schema):
+    fat_twenty_thirty = fields.Nested(LimitsSchema, default=[])
+    saturated_fat_ten = fields.Float(default=None, allow_none=True)
+    saturated_fat_seven = fields.Float(default=None, allow_none=True)
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
+class CarboHydrateReporSchema(ma.Schema):
+    forty_perc = fields.Float(required=False)
+    fifty_perc = fields.Float(required=False)
+    sixty_five_perc = fields.Float(required=False)
+    seventy_five_perc = fields.Float(required=False)
+    only_option = fields.Float(default=-1)
+
+
+class GenericReport(ma.Schema):
+    calories = fields.Float(allow_none=True)
+    fat = fields.Nested(FatReport)
+    carbohydrates = fields.Nested(CarboHydrateReporSchema)
+
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
+
+class FitnessReport(ma.Schema):
+    ideal_weight = fields.Nested(LimitsSchema)
+    protein = fields.Nested(LimitsSchema)
+    maintain = fields.Nested(GenericReport)
+    minus_half = fields.Nested(GenericReport)
+    minus = fields.Nested(GenericReport)
+    plus_half = fields.Nested(GenericReport)
+    plus = fields.Nested(GenericReport)
 
     class Meta:
         unknown = EXCLUDE

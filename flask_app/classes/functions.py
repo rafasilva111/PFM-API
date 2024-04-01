@@ -225,7 +225,6 @@ def push_notification(reciever_user, notification_type):
     requests.post('https://fcm.googleapis.com/fcm/send', json=notification_model, headers=headers)
 
 
-
 @jwt_required()
 def block_user_session_id():
     jti = get_jwt()["jti"]
@@ -233,3 +232,8 @@ def block_user_session_id():
     token_block_record = TokenBlocklist(jti=jti, created_at=now)
     token_block_record.save()
 
+
+def calculate_age(birth_date: datetime):
+    current_date = datetime.now()
+    return current_date.year - birth_date.year - ((current_date.month, current_date.day) < (
+        birth_date.month, birth_date.day))

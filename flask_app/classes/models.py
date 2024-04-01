@@ -11,10 +11,10 @@ from peewee import TextField, FloatField, CharField, DateTimeField, BooleanField
 from flask_bcrypt import generate_password_hash, check_password_hash
 from peewee import Model, MySQLDatabase
 
-db_user = os.environ.get('MYSQL_ROOT') if os.environ.get('MYSQL_ROOT') else "root"
-db_password = os.environ.get('MYSQL_ROOT_PASSWORD') if os.environ.get('MYSQL_ROOT_PASSWORD') else ""
-database = os.environ.get('MYSQL_DATABASE') if os.environ.get('MYSQL_DATABASE') else "flask_api"
-host = os.environ.get('MYSQL_HOST') if os.environ.get('MYSQL_HOST') else "localhost"
+db_user = os.environ.get('MYSQL_ROOT') if os.environ.get('MYSQL_ROOT') else 'root'
+db_password = os.environ.get('MYSQL_ROOT_PASSWORD') if os.environ.get('MYSQL_ROOT_PASSWORD') else ''
+database = os.environ.get('MYSQL_DATABASE') if os.environ.get('MYSQL_DATABASE') else 'flask_api'
+host = os.environ.get('MYSQL_HOST') if os.environ.get('MYSQL_HOST') else 'localhost'
 
 
 class ReconectMySQLDatabase(ReconnectMixin, MySQLDatabase, ABC):
@@ -35,59 +35,59 @@ NOTIFICATION_TYPE_SET = NOTIFICATION_TYPE._value2member_map_
 
 
 class RECIPES_BACKGROUND_TYPE(Enum):
-    LIKED = "L"
-    SAVED = "S"
+    LIKED = 'L'
+    SAVED = 'S'
 
 
 RECIPES_BACKGROUND_TYPE_SET = RECIPES_BACKGROUND_TYPE._value2member_map_
 
 
 class FOLLOWED_STATE_SET(Enum):
-    FOLLOWED = "F"
-    NOT_FOLLOWED = "NF"
-    PENDING_FOLLOWED = "PF"
+    FOLLOWED = 'F'
+    NOT_FOLLOWED = 'NF'
+    PENDING_FOLLOWED = 'PF'
 
 
 USER_TYPE_SET = FOLLOWED_STATE_SET._value2member_map_
 
 
 class UNITS_TYPE(Enum):
-    GRAMS = "g"
-    UNITS = "U"
-    DENTES = "D"
-    FOLHA = "F"
-    MILILITROS = "ml"
-    QB = "QB"
+    GRAMS = 'g'
+    UNITS = 'U'
+    DENTES = 'D'
+    FOLHA = 'F'
+    MILILITROS = 'ml'
+    QB = 'QB'
 
 
 USER_TYPE_SET = UNITS_TYPE._value2member_map_
 
 
 class USER_TYPE(Enum):
-    NORMAL = "N"
-    COMPANY = "C"
-    VIP = "V"
-    ADMIN = "A"
+    NORMAL = 'N'
+    COMPANY = 'C'
+    VIP = 'V'
+    ADMIN = 'A'
 
 
 USER_TYPE_SET = USER_TYPE._value2member_map_
 
 
 class CALENDER_ENTRY_TAG(Enum):
-    PEQUENO_ALMOCO = "PEQUENO ALMOÇO"
-    LANCHE_DA_MANHA = "LANCHE DA MANHÃ"
-    ALMOCO = "ALMOÇO"
-    LANCHE_DA_TARDE = "LANCHE DA TARDE"  # (normal, company, vip, admin)
-    JANTAR = "JANTAR"  # (normal, company, vip, admin)
-    CEIA = "CEIA"  # (normal, company, vip, admin)
+    PEQUENO_ALMOCO = 'PEQUENO ALMOÇO'
+    LANCHE_DA_MANHA = 'LANCHE DA MANHÃ'
+    ALMOCO = 'ALMOÇO'
+    LANCHE_DA_TARDE = 'LANCHE DA TARDE'  # (normal, company, vip, admin)
+    JANTAR = 'JANTAR'  # (normal, company, vip, admin)
+    CEIA = 'CEIA'  # (normal, company, vip, admin)
 
 
 CALENDER_ENTRY_TAG_SET = CALENDER_ENTRY_TAG._value2member_map_
 
 
 class PROFILE_TYPE(Enum):
-    PUBLIC = "PUBLIC"
-    PRIVATE = "PRIVATE"
+    PUBLIC = 'PUBLIC'
+    PRIVATE = 'PRIVATE'
 
 
 PROFILE_TYPE_SET = PROFILE_TYPE._value2member_map_
@@ -110,28 +110,28 @@ class UpdatableBaseModel(BaseModel):
 
 
 class User(UpdatableBaseModel):
-    # __tablename__ = "user"
+    # __tablename__ = 'user'
     name = CharField(null=False)
     username = CharField(null=False, unique=True)
     birth_date = DateTimeField(null=False)
     email = CharField(unique=True, null=False)
     password = CharField(null=False)
 
-    fmc_token = CharField(default="")
+    fmc_token = CharField(default='')
 
-    description = CharField(default="")  # max length 255
+    description = CharField(default='')  # max length 255
 
     user_portion = IntegerField(default=-1)
 
-    profile_type = CharField(default="PRIVATE")  # (protect, private, public)
+    profile_type = CharField(default='PRIVATE')  # (protect, private, public)
     verified = BooleanField(default=False)
-    user_type = CharField(default="N")  # (normal, company, vip, admin)
-    img_source = CharField(default="")
+    user_type = CharField(default='N')  # (normal, company, vip, admin)
+    img_source = CharField(default='')
     rating = FloatField(default=0.0)
 
     activity_level = FloatField(default=-1)
     height = FloatField(default=-1)
-    sex = CharField(default="NA")
+    sex = CharField(default=None, null=True, max_length=1)
     weight = FloatField(default=-1)
     age = CharField(null=False)
 
@@ -140,6 +140,24 @@ class User(UpdatableBaseModel):
 
     def check_password(self, password):
         return check_password_hash(self.password, password)
+
+
+''' Goals '''
+
+
+class Goal(UpdatableBaseModel):
+    goal = FloatField(null=False)
+    calories = FloatField(null=False)
+    fat_upper_limit = FloatField(null=False)
+    fat_lower_limit = FloatField(null=False)
+    saturated_fat = FloatField(null=False)
+    carbohydrates = FloatField(null=False)
+    proteins_upper_limit = FloatField(null=False)
+    proteins_lower_limit = FloatField(null=False)
+    user = ForeignKeyField(User, backref='goals', on_delete="CASCADE")
+
+
+''' Follows '''
 
 
 class FollowRequest(BaseModel):
@@ -193,7 +211,7 @@ class Recipe(UpdatableBaseModel):
     views = IntegerField(default=0, null=False)
     preparation = BlobField(null=False)
 
-    created_by = ForeignKeyField(User, backref="created_recipes")
+    created_by = ForeignKeyField(User, backref='created_recipes')
     nutrition_information = ForeignKeyField(NutritionInformation, backref='recipe', null=True, on_delete='CASCADE')
 
     source_rating = FloatField(null=True)
@@ -202,7 +220,6 @@ class Recipe(UpdatableBaseModel):
     def get_average_rating(self):
         avg_rating = RecipeRating.select(fn.AVG(RecipeRating.rating)).where(RecipeRating.recipe == self).scalar()
         return avg_rating or 0.0
-
 
     def get_likes(self):
         likes = RecipeBackground.select().where(
@@ -213,8 +230,8 @@ class Recipe(UpdatableBaseModel):
 
 
 class RecipeRating(BaseModel):
-    recipe = ForeignKeyField(Recipe, backref="ratings", on_delete="CASCADE")
-    user = ForeignKeyField(User, backref="rated_recipes", on_delete="CASCADE")
+    recipe = ForeignKeyField(Recipe, backref='ratings', on_delete='CASCADE')
+    user = ForeignKeyField(User, backref='rated_recipes', on_delete='CASCADE')
     rating = IntegerField(null=True)
 
     class Meta:
@@ -222,8 +239,8 @@ class RecipeRating(BaseModel):
 
 
 class RecipeBackground(BaseModel):
-    user = ForeignKeyField(User, backref="recipes")
-    recipe = ForeignKeyField(Recipe, backref="backgrounds", on_delete="CASCADE")
+    user = ForeignKeyField(User, backref='recipes')
+    recipe = ForeignKeyField(Recipe, backref='backgrounds', on_delete='CASCADE')
     type = CharField(null=False)  # (liked, saved)
 
     class Meta:
@@ -232,7 +249,7 @@ class RecipeBackground(BaseModel):
 
 class Tag(BaseModel):
     title = CharField(null=False, unique=True)
-    recipes = ManyToManyField(Recipe, backref='tags', on_delete="CASCADE")
+    recipes = ManyToManyField(Recipe, backref='tags', on_delete='CASCADE')
 
 
 RecipeTagThrough = Recipe.tags.get_through_model()
@@ -243,11 +260,11 @@ class Ingredient(EmptyModel):
 
 
 class RecipeIngredientQuantity(EmptyModel):
-    ingredient = ForeignKeyField(Ingredient, backref="ingredient_base")
-    recipe = ForeignKeyField(Recipe, backref="ingredients", on_delete="CASCADE", null=False)
+    ingredient = ForeignKeyField(Ingredient, backref='ingredient_base')
+    recipe = ForeignKeyField(Recipe, backref='ingredients', on_delete='CASCADE', null=False)
     quantity_original = CharField(null=False)
     quantity_normalized = FloatField(null=True)
-    units_normalized = CharField(default="G")
+    units_normalized = CharField(default='G')
     extra_quantity = FloatField(null=True)
     extra_units = CharField(null=True)
 
@@ -257,26 +274,26 @@ class RecipeIngredientQuantity(EmptyModel):
 
 class Comment(UpdatableBaseModel):
     text = CharField(null=False)
-    recipe = ForeignKeyField(Recipe, backref='comments', on_delete="CASCADE")
+    recipe = ForeignKeyField(Recipe, backref='comments', on_delete='CASCADE')
     user = ForeignKeyField(User, backref='comments')
 
 
 class RecipeReport(BaseModel):
     title = CharField(null=False)
     message = CharField(null=False)
-    recipe = ForeignKeyField(Recipe, backref='reports', on_delete="CASCADE")
+    recipe = ForeignKeyField(Recipe, backref='reports', on_delete='CASCADE')
     user = ForeignKeyField(User, backref='recipe_reports')
 
     class Meta:
         db_table = 'recipe_report'
 
 
-""" Calendar """
+''' Calendar '''
 
 
 class CalendarEntry(BaseModel):
-    recipe = ForeignKeyField(Recipe, backref='recipe', on_delete="CASCADE")
-    user = ForeignKeyField(User, backref='user', on_delete="CASCADE")
+    recipe = ForeignKeyField(Recipe, backref='recipe', on_delete='CASCADE')
+    user = ForeignKeyField(User, backref='user', on_delete='CASCADE')
     tag = CharField(null=False)  # Pequeno almoço, Lanche da manhã, Almoço, Lanche da tarde ,Jantar , Ceia
     realization_date = DateTimeField(null=False)
     checked_done = BooleanField(default=False)
@@ -285,29 +302,29 @@ class CalendarEntry(BaseModel):
         db_table = 'calendar_entrys'
 
 
-""" Shopping List """
+''' Shopping List '''
 
 
 class ShoppingList(UpdatableBaseModel):
     name = CharField(null=False)
-    user = ForeignKeyField(User, backref='user', on_delete="CASCADE")
+    user = ForeignKeyField(User, backref='user', on_delete='CASCADE')
     archived = BooleanField(default=False)
 
     class Meta:
-        db_table = "shopping_list"
+        db_table = 'shopping_list'
 
 
 class ShoppingIngredient(BaseModel):
     ingredient = ForeignKeyField(Ingredient, backref='ingredient')
-    shopping_list = ForeignKeyField(ShoppingList, backref='shopping_ingredients', on_delete="CASCADE")
+    shopping_list = ForeignKeyField(ShoppingList, backref='shopping_ingredients', on_delete='CASCADE')
     checked = BooleanField(default=False)
     quantity = FloatField(null=False)
     extra_quantity = FloatField(null=True, default=None)
-    units = CharField(default="G")
+    units = CharField(default='G')
     extra_units = CharField(null=True, default=None)
 
     class Meta:
-        db_table = "shopping_ingredient"
+        db_table = 'shopping_ingredient'
 
 
 ''' Miscellanius '''
@@ -328,7 +345,7 @@ class ApplicationReport(UpdatableBaseModel):
     archived = BooleanField(default=False)
 
     class Meta:
-        db_table = "application_report"
+        db_table = 'application_report'
 
 
 class TokenBlocklist(BaseModel):
