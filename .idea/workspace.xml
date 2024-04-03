@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="f5649365-ad4e-41fe-a227-a38dab81d7a0" name="Changes" comment="Real code starts here">
+      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Dockerfile-Flask" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/commands_db.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/documents.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/admin/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/admin/ns_user.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/errors.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_admin.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_auth.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_calendar.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_comment.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_follow.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_goals.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_miscellaneous.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_notifications.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_recipe.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_shopping_list.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/ns_user.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/util/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/blueprints/restapi/util/constants.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/classes/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/classes/constants.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/classes/enums.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/classes/functions.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/classes/models.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/classes/schemas.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/docs/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/ext/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/ext/app.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/ext/application.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/ext/bycrypt.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/ext/commands.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/ext/database.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/ext/jwt.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/ext/logger.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app/ext/schema.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nginx/default.conf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/run.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_debug.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/cron_schedule.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/constants.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/functions.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/test_ns_auth.py" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="master" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="2N6zeGTzmbD1h1PkCIJNMgIa9AF" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/rafae/Desktop/Projetos/ProjectFoodManagerWorkspace/PFM_Flask_API/test&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;timeTracker.activityTracker&quot;: &quot;null&quot;,
+    &quot;timeTracker.comment&quot;: &quot;&quot;,
+    &quot;timeTracker.inactivityPeriodInMills&quot;: &quot;600000&quot;,
+    &quot;timeTracker.isAutoTrackingEnable&quot;: &quot;false&quot;,
+    &quot;timeTracker.isAutoTrackingTemporaryDisabled&quot;: &quot;false&quot;,
+    &quot;timeTracker.isManualTrackingEnable&quot;: &quot;false&quot;,
+    &quot;timeTracker.isPaused&quot;: &quot;true&quot;,
+    &quot;timeTracker.isPostAfterCommitEnabled&quot;: &quot;false&quot;,
+    &quot;timeTracker.isPostedScheduled&quot;: &quot;true&quot;,
+    &quot;timeTracker.isRunning&quot;: &quot;false&quot;,
+    &quot;timeTracker.isScheduledEnabled&quot;: &quot;false&quot;,
+    &quot;timeTracker.isWhenProjectClosedEnabled&quot;: &quot;false&quot;,
+    &quot;timeTracker.issueId&quot;: &quot;Default&quot;,
+    &quot;timeTracker.issueIdReadable&quot;: &quot;Default&quot;,
+    &quot;timeTracker.pausedTime&quot;: &quot;0&quot;,
+    &quot;timeTracker.query&quot;: &quot;&quot;,
+    &quot;timeTracker.recordedTime&quot;: &quot;0&quot;,
+    &quot;timeTracker.scheduledPeriod&quot;: &quot;19:00:0&quot;,
+    &quot;timeTracker.startTime&quot;: &quot;0&quot;,
+    &quot;timeTracker.timeInMills&quot;: &quot;0&quot;,
+    &quot;timeTracker.type&quot;: &quot;Desenvolvimento&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API" />
+      <recent name="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\flask_app\models" />
+      <recent name="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\flask_app\database\models" />
+      <recent name="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\flask_app" />
+      <recent name="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\flask_app\blueprints\endpoints" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\test" />
+      <recent name="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\flask_app\blueprints\restapi" />
+      <recent name="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\flask_app\api" />
+      <recent name="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\flask_app" />
+      <recent name="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\flask_app\endpoints" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.run_debug">
+    <configuration name="run_debug" type="PythonConfigurationType" factoryName="Python">
+      <module name="PFM_Flask_API" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1,FLASK_APP=run.py,FLASK_DEBUG=0" />
+        <env name="FMC_SERVER_KEY" value="AAAA9vy8Bpg:APA91bHyfumwp_y_Gnv3qVb5h19WTpM2EfZ_a6Un6CoIhJ6KCSO3nyx10ip2eg9i4lM0_K79krSoVp6PoiKk3SWUQP1LxnYZ9KYQcEM9Q_ofCxsfhf-ragQiC9U3fPBOaALxAKcZ5VLR" />
+      </envs>
+      <option name="SDK_HOME" value="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\venv\Scripts\python.exe" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="net.ashald.envfile">
+        <option name="IS_ENABLED" value="false" />
+        <option name="IS_SUBST" value="false" />
+        <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+        <option name="IS_IGNORE_MISSING_FILES" value="false" />
+        <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+        <ENTRIES>
+          <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
+        </ENTRIES>
+      </EXTENSION>
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/run_debug.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Python tests for test_ns_auth.PersistDataTest" type="tests" factoryName="Autodetect" singleton="false" temporary="true" nameIsGenerated="true">
+      <module name="PFM_Flask_API" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="net.ashald.envfile">
+        <option name="IS_ENABLED" value="false" />
+        <option name="IS_SUBST" value="false" />
+        <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+        <option name="IS_IGNORE_MISSING_FILES" value="false" />
+        <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+        <ENTRIES>
+          <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
+        </ENTRIES>
+      </EXTENSION>
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_ns_auth.PersistDataTest&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Python tests for test_ns_auth.PersistDataTest.test_create_user_request" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="PFM_Flask_API" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_ns_auth.PersistDataTest.test_create_user_request&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Unittests in test" type="tests" factoryName="Unittests" nameIsGenerated="true">
+      <module name="PFM_Flask_API" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\venv\Scripts\python.exe" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="net.ashald.envfile">
+        <option name="IS_ENABLED" value="false" />
+        <option name="IS_SUBST" value="false" />
+        <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+        <option name="IS_IGNORE_MISSING_FILES" value="false" />
+        <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+        <ENTRIES>
+          <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
+        </ENTRIES>
+      </EXTENSION>
+      <option name="_new_pattern" value="&quot;python -m  pytest -s&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/test&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest in test" type="tests" factoryName="py.test" nameIsGenerated="true">
+      <module name="PFM_Flask_API" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="C:\Users\rafae\Desktop\Projetos\ProjectFoodManagerWorkspace\PFM_Flask_API\venv\Scripts\python.exe" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="net.ashald.envfile">
+        <option name="IS_ENABLED" value="false" />
+        <option name="IS_SUBST" value="false" />
+        <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+        <option name="IS_IGNORE_MISSING_FILES" value="false" />
+        <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+        <ENTRIES>
+          <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
+        </ENTRIES>
+      </EXTENSION>
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/test&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.run_debug" />
+      <item itemvalue="Python tests.Unittests in test" />
+      <item itemvalue="Python tests.pytest in test" />
+      <item itemvalue="Python tests.Python tests for test_ns_auth.PersistDataTest" />
+      <item itemvalue="Python tests.Python tests for test_ns_auth.PersistDataTest.test_create_user_request" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python tests.Python tests for test_ns_auth.PersistDataTest" />
+        <item itemvalue="Python tests.Python tests for test_ns_auth.PersistDataTest.test_create_user_request" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f5649365-ad4e-41fe-a227-a38dab81d7a0" name="Changes" comment="Real code starts here" />
+      <created>1678999412516</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1678999412516</updated>
+    </task>
+    <task id="LOCAL-00001" summary="Stable build, works for prod and dev:&#10;for dev it must be run the run_debug.py and have these env variables PYTHONUNBUFFERED=1,FLASK_APP=run_debug.py,DEBUG=1,DATABASE_NAME=flask_api&#10;(only needed to be set on pycharm)">
+      <created>1679268889869</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1679268889869</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Production comments shoudl be here">
+      <created>1679505691931</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1679505691931</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Real code starts here">
+      <created>1679505812750</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1679505812750</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
+    <servers />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.fileTypeFactory" implementationName=".env" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Stable build, works for prod and dev:&#10;for dev it must be run the run_debug.py and have these env variables PYTHONUNBUFFERED=1,FLASK_APP=run_debug.py,DEBUG=1,DATABASE_NAME=flask_api&#10;(only needed to be set on pycharm)" />
+    <MESSAGE value="Production comments shoudl be here" />
+    <MESSAGE value="Real code starts here" />
+    <option name="LAST_COMMIT_MESSAGE" value="Real code starts here" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/flask_app/api/endpoints/bp_auth.py</url>
+          <line>126</line>
+          <option name="timeStamp" value="12" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/flask_app/blueprints/restapi/ns_comment.py</url>
+          <line>152</line>
+          <option name="timeStamp" value="57" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/flask_app/classes/model_recipe.py</url>
+          <line>93</line>
+          <option name="timeStamp" value="78" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/flask_app/blueprints/restapi/ns_recipe.py</url>
+          <line>210</line>
+          <option name="timeStamp" value="105" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/flask_app/blueprints/restapi/ns_recipe.py</url>
+          <line>1258</line>
+          <option name="timeStamp" value="123" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/flask_app/blueprints/restapi/ns_calendar.py</url>
+          <line>155</line>
+          <option name="timeStamp" value="219" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/flask_app/blueprints/restapi/ns_follow.py</url>
+          <line>351</line>
+          <option name="timeStamp" value="241" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/flask_app/blueprints/restapi/ns_calendar.py</url>
+          <line>439</line>
+          <option name="timeStamp" value="247" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/flask_app/blueprints/restapi/ns_calendar.py</url>
+          <line>432</line>
+          <option name="timeStamp" value="248" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/flask_app/blueprints/restapi/ns_comment.py</url>
+          <line>89</line>
+          <option name="timeStamp" value="294" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/flask_app/blueprints/restapi/ns_auth.py</url>
+          <line>100</line>
+          <option name="timeStamp" value="447" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/flask_app/blueprints/restapi/ns_auth.py</url>
+          <line>92</line>
+          <option name="timeStamp" value="448" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>

@@ -1,74 +1,28 @@
+# Dockerize Django along with Nginx and PostgreSQL
 
+Docker will make your life a bit easier when it comes to deployment and CI/CD. This method can be used to deploy most stacks with Nginx and Postgres, ie. Flask, django-rest, FastAPI, NodeJS...
 
-## Extensions recommended
+## Installation
 
-### Markdown Support:
-PyCharm supports Markdown files out of the box, so you should be able to open and edit .md files without any additional setup. However, if you want advanced Markdown preview features, you can install a Markdown plugin.
+Your system must have [docker-compose](https://docs.docker.com/compose/install/) to follow along.
 
+```bash
+docker-compose build
+docker-compose up
+```
+You would be able to access
 
-#### Go to Settings/Preferences:
+[localhost:8008](http://localhost:8008/)
 
-For Windows and Linux: File > Settings
-For macOS: PyCharm > Preferences
-
-#### Install Markdown Plugin:
-
-In the Settings/Preferences dialog, navigate to Plugins.
-
-Click on the Marketplace tab.
-
-Search for "Markdown" in the search bar.
-
-Find the "Markdown support" plugin and click Install or Enable (if it's already installed but disabled).
-
-Restart PyCharm to apply the changes.
-
-Now you should have enhanced Markdown support in PyCharm, including preview features.
-
-## Good Practices
-
-
-### Errors
-
-
-´´´
-
-errors = {}
-if "username" in e.args[1]:
-    errors["username"]=["Username is already being used."]
-elif "email" in e.args[1]:
-    errors["email"] = ["Email is already being used."]
-
-return Response(status=400, response=json.dumps({"errors":errors}), mimetype="application/json")
-
-´´´
-
-
-
-
-## Run flask commands on windows
-
--> powershell navigate to folder
-
--> flask <command-name>
-
-### Troubleshoot:
-
--> pip install flask-cli
-
-pip install flask-cli
-
-
-drop database db_name
-create database db_name
-
-
-
-ACTIVIDADE = {
-            'sedentario': ['Pouco ou nenhum execício', 1.2],
-            'leve': ['Execício de 1 a 3 vezes', 1.375],
-            'moderado': ['Execício 4-5 vezes/semana', 1.465],
-            'ativo': ['Execício diario ou exercícios intensos 3-4 vezes/semana', 1.55],
-            'muito_ativo': ['Exercícios intensos 6-7 vezes/semana', 1.725],
-            'extra_ativo': ['Execício intesso diário, ou te um trabalho muito fisico', 1.9]
-        }
+## Usage
+stop the container
+```bash
+docker-compose down
+```
+drop to django shell
+```bash
+docker-compose exec web python manage.py shell
+```
+more at [here](https://docs.docker.com/get-started/overview/)
+## Contributing
+You can do whatever you want with this repo.
